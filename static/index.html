@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ground — time & intentions</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="top">
+    <p class="eyebrow">A quiet place to notice the day</p>
+    <h1>Ground</h1>
+    <p class="sub" id="dateLine"></p>
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab active" data-view="sheet" role="tab" aria-selected="true">Today</button>
+      <button type="button" class="tab" data-view="history" role="tab" aria-selected="false">History</button>
+      <button type="button" class="tab" data-view="analytics" role="tab" aria-selected="false">Analytics</button>
+    </nav>
+  </header>
+
+  <main id="view-sheet" class="view view-sheet">
+    <div class="sheet-grid">
+      <div class="sheet-col sheet-col-track">
+        <section class="card card-todos panel panel-time" aria-labelledby="time-heading">
+          <h2 id="time-heading">Time</h2>
+          <form id="entry-form" class="entry-form-stack">
+            <label class="stack-label">
+              <span class="field-label">Hours</span>
+              <input type="number" id="hours" name="hours" min="0" max="24" step="0.25" placeholder="0" inputmode="decimal" />
+            </label>
+            <label class="stack-label">
+              <span class="field-label">Minutes</span>
+              <input type="number" id="minutes" name="minutes" min="0" max="1439" placeholder="0" inputmode="numeric" />
+            </label>
+            <label class="stack-label">
+              <span class="field-label">Where it went</span>
+              <div id="time-category-mount" class="time-category-mount"></div>
+            </label>
+            <label class="stack-label">
+              <span class="field-label">Note</span>
+              <input type="text" id="note" maxlength="200" placeholder="" autocomplete="off" />
+            </label>
+            <button type="submit" class="primary primary-block">Add</button>
+          </form>
+        </section>
+
+        <section class="card card-todos panel panel-logged" aria-labelledby="today-entries-heading">
+          <h2 id="today-entries-heading">Logged today</h2>
+          <ul id="entries" class="entries entries-compact"></ul>
+          <p id="entries-empty" class="empty hidden">Nothing here yet.</p>
+          <p class="total" id="day-total"></p>
+        </section>
+      </div>
+
+      <div class="sheet-col sheet-col-intentions-wrap">
+        <section class="card card-todos panel panel-intentions" aria-labelledby="todos-heading">
+          <h2 id="todos-heading">Intentions</h2>
+          <div id="todo-board" class="todo-board" aria-live="polite"></div>
+          <p class="save-hint" id="todo-status"></p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <main id="view-history" class="view hidden" aria-hidden="true">
+    <section class="card card-soft">
+      <h2>Time history</h2>
+      <div id="history"></div>
+    </section>
+  </main>
+
+  <main id="view-analytics" class="view hidden" aria-hidden="true">
+    <section class="card card-soft">
+      <h2>Patterns</h2>
+      <div id="analytics-root"></div>
+    </section>
+  </main>
+
+  <div id="task-log-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" id="task-log-modal-backdrop" tabindex="-1"></div>
+    <div
+      class="modal-dialog card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="task-log-modal-title"
+      aria-describedby="task-log-modal-desc"
+    >
+      <h2 id="task-log-modal-title" class="modal-title">Log time</h2>
+      <p id="task-log-modal-desc" class="modal-desc">
+        This entry is always added to <strong>today’s</strong> time list, even if the task lives under Tomorrow or Future.
+      </p>
+      <p id="task-log-sum-line" class="modal-sum-line hidden"></p>
+      <form id="task-log-form" class="entry-form-stack">
+        <label class="stack-label">
+          <span class="field-label">Hours</span>
+          <input type="number" id="task-log-hours" min="0" max="24" step="0.25" placeholder="0" inputmode="decimal" />
+        </label>
+        <label class="stack-label">
+          <span class="field-label">Minutes</span>
+          <input type="number" id="task-log-minutes" min="0" max="1439" placeholder="0" inputmode="numeric" />
+        </label>
+        <label class="stack-label">
+          <span class="field-label">Where it went</span>
+          <div id="task-log-category-mount" class="time-category-mount"></div>
+        </label>
+        <label class="stack-label">
+          <span class="field-label">Note</span>
+          <input type="text" id="task-log-note" maxlength="200" autocomplete="off" />
+        </label>
+        <div class="modal-actions">
+          <button type="button" class="ghost" id="task-log-cancel">Cancel</button>
+          <button type="submit" class="primary" id="task-log-submit">Log time</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="app-message-modal" class="modal modal-message hidden" aria-hidden="true">
+    <div class="modal-backdrop" id="app-message-backdrop" tabindex="-1"></div>
+    <div
+      class="modal-dialog modal-dialog-message card card-todos"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="app-message-title"
+      aria-describedby="app-message-text"
+    >
+      <h2 id="app-message-title" class="modal-title modal-message-title">Notice</h2>
+      <p id="app-message-text" class="modal-message-body"></p>
+      <div class="modal-actions">
+        <button type="button" class="primary" id="app-message-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

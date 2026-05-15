@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "minutes": 45,
+      "category": "planning",
+      "note": "Morning planning",
+      "logged_at": "2026-05-15T09:30:00+05:30"
+    },
+    {
+      "minutes": 90,
+      "category": "deep_work",
+      "note": "Focused implementation",
+      "logged_at": "2026-05-15T12:00:00+05:30",
+      "source_task_id": "example-task-1"
+    }
+  ]
+}

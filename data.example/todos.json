@@ -1,0 +1,23 @@
+{
+  "2026-05-15": [
+    {
+      "id": "example-task-1",
+      "text": "Plan the day",
+      "priority": "p1",
+      "deadline": "2026-05-15",
+      "done": false,
+      "category": "planning"
+    }
+  ],
+  "2026-05-16": [],
+  "__future__": [
+    {
+      "id": "example-task-2",
+      "text": "Review weekly patterns",
+      "priority": "p2",
+      "deadline": null,
+      "done": false,
+      "category": "strategy"
+    }
+  ]
+}
