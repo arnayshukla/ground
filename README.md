@@ -13,7 +13,7 @@ management ceremony.
 The live app is private by design. This repository is public so the code,
 deployment shape, and product thinking can be inspected.
 
-![Ground app preview](docs/ground-preview.svg)
+![Ground app preview](static/ground-preview.svg)
 
 ## Features
 
