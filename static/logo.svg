@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="220" viewBox="0 0 720 220" role="img" aria-labelledby="title desc">
+  <title id="title">Ground logo</title>
+  <desc id="desc">Ground wordmark with a calm line-based time and intentions symbol.</desc>
+  <rect width="720" height="220" rx="28" fill="#f0ebe3"/>
+  <g transform="translate(56 48)">
+    <rect width="124" height="124" rx="26" fill="#fdfbf7" stroke="#e4dcd2" stroke-width="3"/>
+    <path d="M27 38h70M27 62h70M27 86h49" fill="none" stroke="#3d3832" stroke-width="8" stroke-linecap="round"/>
+    <path d="M43 30v16M62 54v16M81 78v16" fill="none" stroke="#6d8f6e" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="98" cy="86" r="6.5" fill="#6d8f6e"/>
+  </g>
+  <g transform="translate(220 63)">
+    <text x="0" y="64" fill="#3d3832" font-family="Georgia, 'Iowan Old Style', 'Palatino Linotype', serif" font-size="76" font-weight="500">Ground</text>
+    <text x="4" y="104" fill="#8c847a" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="22" font-weight="600" letter-spacing="2.6">TIME &amp; INTENTIONS</text>
+  </g>
+</svg>

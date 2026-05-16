@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Ground favicon</title>
+  <desc id="desc">A quiet green mark with three grounded time lines.</desc>
+  <rect width="64" height="64" rx="14" fill="#f0ebe3"/>
+  <path d="M15 20h34M15 32h34M15 44h24" fill="none" stroke="#3d3832" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M23 16v8M32 28v8M41 40v8" fill="none" stroke="#6d8f6e" stroke-width="4.5" stroke-linecap="round"/>
+  <circle cx="49" cy="44" r="3.5" fill="#6d8f6e"/>
+</svg>
