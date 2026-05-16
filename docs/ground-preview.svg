@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+  <title id="title">Ground app preview</title>
+  <desc id="desc">A preview of the Ground time and intentions tracker interface.</desc>
+  <rect width="1280" height="760" fill="#f0ebe3"/>
+  <ellipse cx="640" cy="-40" rx="720" ry="290" fill="#6d8f6e" opacity="0.08"/>
+  <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+    <text x="96" y="76" fill="#8c847a" font-size="15" font-weight="700" letter-spacing="2">A QUIET PLACE TO NOTICE THE DAY</text>
+    <text x="96" y="122" fill="#3d3832" font-size="44" font-family="Georgia, serif">Ground</text>
+    <text x="96" y="154" fill="#8c847a" font-size="18">Fri, May 15</text>
+    <g transform="translate(96 188)">
+      <rect x="0" y="0" width="170" height="46" rx="10" fill="#dfe8da" stroke="#9cb89b"/>
+      <text x="85" y="29" fill="#5a7a5b" font-size="16" font-weight="700" text-anchor="middle">Today</text>
+      <rect x="184" y="0" width="170" height="46" rx="10" fill="#fdfbf7" stroke="#e4dcd2"/>
+      <text x="269" y="29" fill="#8c847a" font-size="16" text-anchor="middle">History</text>
+      <rect x="368" y="0" width="170" height="46" rx="10" fill="#fdfbf7" stroke="#e4dcd2"/>
+      <text x="453" y="29" fill="#8c847a" font-size="16" text-anchor="middle">Analytics</text>
+    </g>
+
+    <g transform="translate(96 270)">
+      <rect x="0" y="0" width="480" height="230" rx="14" fill="#fdfbf7" stroke="#e4dcd2"/>
+      <text x="28" y="44" fill="#3d3832" font-size="24" font-family="Georgia, serif">Time</text>
+      <text x="28" y="84" fill="#8c847a" font-size="14" font-weight="700">HOURS</text>
+      <rect x="28" y="96" width="190" height="44" rx="9" fill="#faf8f4" stroke="#e4dcd2"/>
+      <text x="46" y="125" fill="#3d3832" font-size="18">1</text>
+      <text x="246" y="84" fill="#8c847a" font-size="14" font-weight="700">MINUTES</text>
+      <rect x="246" y="96" width="190" height="44" rx="9" fill="#faf8f4" stroke="#e4dcd2"/>
+      <text x="264" y="125" fill="#3d3832" font-size="18">30</text>
+      <text x="28" y="170" fill="#8c847a" font-size="14" font-weight="700">WHERE IT WENT</text>
+      <rect x="28" y="182" width="270" height="40" rx="9" fill="#faf8f4" stroke="#e4dcd2"/>
+      <text x="48" y="207" fill="#3d3832" font-size="16">Deep work</text>
+      <rect x="320" y="182" width="116" height="40" rx="9" fill="#6d8f6e"/>
+      <text x="378" y="207" fill="#111111" font-size="16" font-weight="700" text-anchor="middle">Add</text>
+    </g>
+
+    <g transform="translate(96 524)">
+      <rect x="0" y="0" width="480" height="136" rx="14" fill="#fdfbf7" stroke="#e4dcd2"/>
+      <text x="28" y="42" fill="#3d3832" font-size="24" font-family="Georgia, serif">Logged today</text>
+      <text x="28" y="78" fill="#3d3832" font-size="17">1h 30m · Deep work</text>
+      <text x="28" y="106" fill="#8c847a" font-size="15">Focused implementation</text>
+      <text x="376" y="106" fill="#5a7a5b" font-size="15" font-weight="700">2h total</text>
+    </g>
+
+    <g transform="translate(608 270)">
+      <rect x="0" y="0" width="576" height="390" rx="14" fill="#fdfbf7" stroke="#e4dcd2"/>
+      <text x="28" y="44" fill="#3d3832" font-size="24" font-family="Georgia, serif">Intentions</text>
+      <g transform="translate(28 76)">
+        <rect x="0" y="0" width="520" height="78" rx="10" fill="#faf8f4" stroke="#e4dcd2"/>
+        <circle cx="28" cy="39" r="10" fill="none" stroke="#6d8f6e" stroke-width="3"/>
+        <text x="54" y="35" fill="#3d3832" font-size="17" font-weight="700">Plan the focus block</text>
+        <text x="54" y="59" fill="#8c847a" font-size="14">P1 · Deep work · due May 18</text>
+      </g>
+      <g transform="translate(28 170)">
+        <rect x="0" y="0" width="520" height="78" rx="10" fill="#faf8f4" stroke="#e4dcd2"/>
+        <circle cx="28" cy="39" r="10" fill="none" stroke="#6d8f6e" stroke-width="3"/>
+        <text x="54" y="35" fill="#3d3832" font-size="17" font-weight="700">Review project notes</text>
+        <text x="54" y="59" fill="#8c847a" font-size="14">P1 · Deep work · due May 20</text>
+      </g>
+      <g transform="translate(28 264)">
+        <rect x="0" y="0" width="520" height="78" rx="10" fill="#f5f1ea" stroke="#e4dcd2"/>
+        <path d="M20 40 l7 7 l14 -18" fill="none" stroke="#6d8f6e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="54" y="35" fill="#8c847a" font-size="17" font-weight="700">Write the daily summary</text>
+        <text x="54" y="59" fill="#8c847a" font-size="14">Done · logged 1h</text>
+      </g>
+    </g>
+  </g>
+</svg>
