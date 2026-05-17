@@ -93,10 +93,6 @@ function calendarIconSvg() {
 function buildDeadlineRow(task, rowForReorder) {
   const dueRow = document.createElement("div");
   dueRow.className = "chip-row deadline-row";
-  const hint = document.createElement("span");
-  hint.className = "chip-hint";
-  hint.textContent = "Deadline";
-  dueRow.appendChild(hint);
 
   const cluster = document.createElement("div");
   cluster.className = "deadline-cluster";
@@ -885,10 +881,6 @@ function createTodoRow(task) {
 
   const catRow = document.createElement("div");
   catRow.className = "chip-row";
-  const catHint = document.createElement("span");
-  catHint.className = "chip-hint";
-  catHint.textContent = "Category";
-  catRow.appendChild(catHint);
   const catMount = document.createElement("div");
   catMount.className = "todo-category-dd-mount";
   const initCat = categories.some((c) => c.id === task.category)
@@ -915,10 +907,6 @@ function createTodoRow(task) {
 
   const prRow = document.createElement("div");
   prRow.className = "chip-row";
-  const prHint = document.createElement("span");
-  prHint.className = "chip-hint";
-  prHint.textContent = "Priority";
-  prRow.appendChild(prHint);
   const prVal = (task.priority || "none").toLowerCase();
   ["p1", "p2", "p3", "none"].forEach((p) => {
     const b = document.createElement("button");

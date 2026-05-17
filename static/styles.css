@@ -210,15 +210,15 @@ body {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  flex: 1;
+  width: 100%;
   min-width: 0;
 }
 
 .deadline-display {
-  flex: 0 0 10.75rem;
-  width: 10.75rem;
-  min-width: 10.75rem;
-  max-width: 10.75rem;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  max-width: none;
   border: 1px solid var(--border);
   background: #faf8f4;
   border-radius: 8px;
@@ -852,21 +852,6 @@ textarea:focus,
   flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem 0.35rem;
-}
-
-.chip-hint {
-  font-size: 0.62rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  width: 100%;
-}
-
-@media (min-width: 400px) {
-  .chip-hint {
-    width: 3.75rem;
-    flex-shrink: 0;
-  }
 }
 
 @media (max-width: 520px) {
