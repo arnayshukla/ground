@@ -40,6 +40,7 @@ PRIORITIES = frozenset({"p1", "p2", "p3", "none"})
 
 # Undated backlog bucket in todos.json (not a calendar date key).
 FUTURE_KEY = "__future__"
+SCRIBBLE_KEY = "__scribbles__"
 
 app = Flask(__name__, static_folder=str(STATIC), static_url_path="")
 
@@ -263,6 +264,27 @@ def _tasks_future(store: dict) -> list[dict]:
 
 def _save_tasks_future(store: dict, tasks: list[dict]) -> None:
     store[FUTURE_KEY] = _clean_task_list(tasks)
+
+
+def _scribble_for_date(store: dict, d: date) -> str:
+    raw = store.get(SCRIBBLE_KEY)
+    if not isinstance(raw, dict):
+        return ""
+    return str(raw.get(d.isoformat()) or "")
+
+
+def _save_scribble_for_date(store: dict, d: date, text: str) -> None:
+    raw = store.get(SCRIBBLE_KEY)
+    scribbles = raw if isinstance(raw, dict) else {}
+    cleaned = str(text or "").strip()[:5000]
+    if cleaned:
+        scribbles[d.isoformat()] = cleaned
+    else:
+        scribbles.pop(d.isoformat(), None)
+    if scribbles:
+        store[SCRIBBLE_KEY] = scribbles
+    else:
+        store.pop(SCRIBBLE_KEY, None)
 
 
 def _find_task_by_id(tasks: list[dict], task_id: str) -> tuple[int | None, dict | None]:
@@ -491,6 +513,7 @@ def get_todos():
             "today": _tasks_for_date(store, today),
             "tomorrow": _tasks_for_date(store, today + timedelta(days=1)),
             "future": _tasks_future(store),
+            "scribble": _scribble_for_date(store, today),
             "carryover": {
                 "sourceDate": yk,
                 "tasks": yesterday_open,
@@ -522,7 +545,7 @@ def save_todos():
     mk = (today + timedelta(days=1)).isoformat()
     store = _load_todos()
 
-    if "today" in body or "tomorrow" in body or "future" in body:
+    if "today" in body or "tomorrow" in body or "future" in body or "scribble" in body:
         if "today" in body:
             tlist = body.get("today")
             if not isinstance(tlist, list):
@@ -538,6 +561,8 @@ def save_todos():
             if not isinstance(tlist, list):
                 return jsonify({"error": "future must be an array"}), 400
             _save_tasks_future(store, tlist)
+        if "scribble" in body:
+            _save_scribble_for_date(store, today, body.get("scribble") or "")
         _save_todos(store)
         return jsonify({"ok": True})
 

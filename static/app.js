@@ -447,7 +447,12 @@ function scheduleTodoSave() {
 
 function gatherTodoPayload() {
   const board = $("todo-board");
-  const out = { today: [], tomorrow: [], future: [] };
+  const out = {
+    today: [],
+    tomorrow: [],
+    future: [],
+    scribble: board.querySelector(".scribble-text")?.value.trim() || "",
+  };
   board.querySelectorAll(".todo-pane").forEach((pane) => {
     const which = pane.dataset.which;
     if (which !== "today" && which !== "tomorrow" && which !== "future") return;
@@ -791,6 +796,7 @@ async function saveTodosFromBoard() {
         today: payload.today,
         tomorrow: payload.tomorrow,
         future: payload.future,
+        scribble: payload.scribble,
       }),
     });
     $("todo-status").textContent = "Saved.";
@@ -946,6 +952,44 @@ function createTodoRow(task) {
   return row;
 }
 
+function createScribblePane(text) {
+  const section = document.createElement("section");
+  section.className = "scribble-pane";
+
+  const expanded =
+    localStorage.getItem("ground.todo.pane.scribble.collapsed") !== "1";
+
+  const headBtn = document.createElement("button");
+  headBtn.type = "button";
+  headBtn.className = "todo-pane-toggle scribble-toggle";
+  headBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
+  headBtn.textContent = "Scribble";
+
+  const body = document.createElement("div");
+  body.className = "scribble-body" + (expanded ? "" : " pane-collapsed");
+
+  const textarea = document.createElement("textarea");
+  textarea.className = "scribble-text";
+  textarea.placeholder = "Thoughts before they become actionables";
+  textarea.maxLength = 5000;
+  textarea.value = text || "";
+  textarea.setAttribute("aria-label", "Scribble notes");
+  textarea.addEventListener("input", scheduleTodoSave);
+
+  headBtn.addEventListener("click", () => {
+    const isOpen = headBtn.getAttribute("aria-expanded") === "true";
+    const next = !isOpen;
+    headBtn.setAttribute("aria-expanded", next ? "true" : "false");
+    body.classList.toggle("pane-collapsed", !next);
+    localStorage.setItem("ground.todo.pane.scribble.collapsed", next ? "0" : "1");
+  });
+
+  body.appendChild(textarea);
+  section.appendChild(headBtn);
+  section.appendChild(body);
+  return section;
+}
+
 function createCarryoverRow(task, sourceDate) {
   const row = document.createElement("div");
   row.className = "carryover-row";
@@ -1016,6 +1060,7 @@ function renderTodoBoard(data) {
 
   const panes = document.createElement("div");
   panes.className = "todo-stack";
+  panes.appendChild(createScribblePane(data.scribble || ""));
 
   ["today", "tomorrow", "future"].forEach((which) => {
     const section = document.createElement("section");

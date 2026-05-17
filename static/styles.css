@@ -384,6 +384,7 @@ body {
   gap: 0.35rem;
   flex: 1;
   min-width: 0;
+  align-items: stretch;
 }
 
 .todo-note {
@@ -397,6 +398,8 @@ body {
   font: inherit;
   font-size: 0.72rem;
   line-height: 1.35;
+  height: 100%;
+  min-height: 2.18rem;
 }
 
 .todo-note::placeholder {
@@ -483,6 +486,7 @@ body {
 .custom-dd-compact .custom-dd-btn {
   padding: 0.35rem 0.5rem;
   font-size: 0.72rem;
+  min-height: 2.18rem;
 }
 
 .custom-dd-compact .custom-dd-list {
@@ -752,9 +756,35 @@ textarea:focus,
   gap: 1.1rem;
 }
 
-.todo-pane + .todo-pane {
+.todo-pane + .todo-pane,
+.scribble-pane + .todo-pane {
   padding-top: 0.35rem;
   border-top: 1px solid var(--border);
+}
+
+.scribble-pane {
+  margin-bottom: 0.2rem;
+}
+
+.scribble-body.pane-collapsed {
+  display: none;
+}
+
+.scribble-text {
+  width: 100%;
+  min-height: 5.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px dashed #cfc4b8;
+  border-radius: var(--radius-sm);
+  background: #faf8f4;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.scribble-text::placeholder {
+  color: var(--muted);
 }
 
 .todo-pane-title {
