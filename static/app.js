@@ -880,14 +880,15 @@ function createTodoRow(task) {
   const meta = document.createElement("div");
   meta.className = "todo-meta";
 
+  const metaControls = document.createElement("div");
+  metaControls.className = "todo-meta-controls";
+
   const catRow = document.createElement("div");
-  catRow.className = "chip-row category-note-row";
+  catRow.className = "chip-row";
   const catHint = document.createElement("span");
   catHint.className = "chip-hint";
   catHint.textContent = "Category";
   catRow.appendChild(catHint);
-  const catNoteControls = document.createElement("div");
-  catNoteControls.className = "category-note-controls";
   const catMount = document.createElement("div");
   catMount.className = "todo-category-dd-mount";
   const initCat = categories.some((c) => c.id === task.category)
@@ -902,17 +903,15 @@ function createTodoRow(task) {
       scheduleTodoSave();
     },
   });
-  const noteInp = document.createElement("input");
-  noteInp.type = "text";
+  catRow.appendChild(catMount);
+
+  const noteInp = document.createElement("textarea");
   noteInp.className = "todo-note";
   noteInp.placeholder = "Notes";
   noteInp.value = task.note || "";
   noteInp.maxLength = 500;
   noteInp.setAttribute("aria-label", "Task notes");
   noteInp.addEventListener("input", scheduleTodoSave);
-  catNoteControls.appendChild(catMount);
-  catNoteControls.appendChild(noteInp);
-  catRow.appendChild(catNoteControls);
 
   const prRow = document.createElement("div");
   prRow.className = "chip-row";
@@ -936,9 +935,11 @@ function createTodoRow(task) {
     prRow.appendChild(b);
   });
 
-  meta.appendChild(catRow);
-  meta.appendChild(prRow);
-  meta.appendChild(buildDeadlineRow(task, row));
+  metaControls.appendChild(catRow);
+  metaControls.appendChild(prRow);
+  metaControls.appendChild(buildDeadlineRow(task, row));
+  meta.appendChild(metaControls);
+  meta.appendChild(noteInp);
 
   doneCb.addEventListener("change", () => {
     row.classList.toggle("todo-row-done", doneCb.checked);

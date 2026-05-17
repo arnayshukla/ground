@@ -375,24 +375,11 @@ body {
   display: flex;
 }
 
-.category-note-row {
-  align-items: stretch;
-}
-
-.category-note-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 0.35rem;
-  flex: 1;
-  min-width: 0;
-  align-items: stretch;
-  align-self: stretch;
-}
-
 .todo-note {
   width: 100%;
   min-width: 0;
-  padding: 0.35rem 0.5rem;
+  min-height: 100%;
+  padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: #faf8f4;
@@ -400,9 +387,8 @@ body {
   font: inherit;
   font-size: 0.72rem;
   line-height: 1.35;
-  height: 100%;
   align-self: stretch;
-  min-height: 2.18rem;
+  resize: vertical;
 }
 
 .todo-note::placeholder {
@@ -861,9 +847,17 @@ textarea:focus,
 }
 
 .todo-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 1fr);
+  gap: 0.35rem;
+  align-items: stretch;
+}
+
+.todo-meta-controls {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  min-width: 0;
 }
 
 .chip-row {
@@ -889,8 +883,12 @@ textarea:focus,
 }
 
 @media (max-width: 520px) {
-  .category-note-controls {
+  .todo-meta {
     grid-template-columns: 1fr;
+  }
+
+  .todo-note {
+    min-height: 4.5rem;
   }
 }
 
