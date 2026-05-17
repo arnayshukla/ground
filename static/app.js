@@ -321,6 +321,10 @@ function iconDuplicateSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="8" height="14" rx="2"/><rect x="13" y="5" width="8" height="14" rx="2"/></svg>`;
 }
 
+function iconClockSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`;
+}
+
 function makeIconButton(className, ariaLabel, onClick, svgHtml) {
   const b = document.createElement("button");
   b.type = "button";
@@ -863,15 +867,16 @@ function createTodoRow(task) {
   const logBtn = document.createElement("button");
   logBtn.type = "button";
   logBtn.className = "btn-todo-log";
-  logBtn.textContent = "Log time";
   logBtn.setAttribute("aria-label", "Log time to today");
+  logBtn.title = "Log time";
+  logBtn.innerHTML = iconClockSvg();
   logBtn.addEventListener("click", () => openTaskLogModal(row));
 
-  top.appendChild(grip);
   top.appendChild(doneCb);
   top.appendChild(inp);
   top.appendChild(logBtn);
   top.appendChild(rm);
+  top.appendChild(grip);
 
   const meta = document.createElement("div");
   meta.className = "todo-meta";
