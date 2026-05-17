@@ -3,6 +3,7 @@
     {
       "id": "example-task-1",
       "text": "Plan the day",
+      "note": "Decide the first focus block before opening chat.",
       "priority": "p1",
       "deadline": "2026-05-15",
       "done": false,
@@ -14,6 +15,7 @@
     {
       "id": "example-task-2",
       "text": "Review weekly patterns",
+      "note": "Look for categories that keep spilling into tomorrow.",
       "priority": "p2",
       "deadline": null,
       "done": false,

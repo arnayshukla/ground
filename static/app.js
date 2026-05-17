@@ -460,10 +460,11 @@ function gatherTodoPayload() {
         row.querySelector(".chip.pri.active")?.getAttribute("data-v") || "none";
       const cat =
         row.querySelector("input.todo-task-category")?.value || defaultCategoryId();
+      const note = row.querySelector(".todo-note")?.value.trim() || "";
       const dateInp = row.querySelector(".due-date");
       let deadline = dateInp && dateInp.value ? dateInp.value : null;
       const done = !!row.querySelector(".todo-done")?.checked;
-      out[which].push({ id, text, priority: pri, deadline, done, category: cat });
+      out[which].push({ id, text, note, priority: pri, deadline, done, category: cat });
     });
   });
   return out;
@@ -478,11 +479,12 @@ function rowToTask(row) {
   const text = row.querySelector(".todo-text")?.value.trim() || "";
   const pri = row.querySelector(".chip.pri.active")?.getAttribute("data-v") || "none";
   const cat = row.querySelector("input.todo-task-category")?.value || defaultCategoryId();
+  const note = row.querySelector(".todo-note")?.value.trim() || "";
   const dateInp = row.querySelector(".due-date");
   const deadline = dateInp && dateInp.value ? dateInp.value : null;
   const done = !!row.querySelector(".todo-done")?.checked;
   const id = row.dataset.taskId || "";
-  return { id, text, priority: pri, deadline, done, category: cat };
+  return { id, text, note, priority: pri, deadline, done, category: cat };
 }
 
 function taskSortTuple(t) {
@@ -873,11 +875,13 @@ function createTodoRow(task) {
   meta.className = "todo-meta";
 
   const catRow = document.createElement("div");
-  catRow.className = "chip-row";
+  catRow.className = "chip-row category-note-row";
   const catHint = document.createElement("span");
   catHint.className = "chip-hint";
   catHint.textContent = "Category";
   catRow.appendChild(catHint);
+  const catNoteControls = document.createElement("div");
+  catNoteControls.className = "category-note-controls";
   const catMount = document.createElement("div");
   catMount.className = "todo-category-dd-mount";
   const initCat = categories.some((c) => c.id === task.category)
@@ -892,7 +896,17 @@ function createTodoRow(task) {
       scheduleTodoSave();
     },
   });
-  catRow.appendChild(catMount);
+  const noteInp = document.createElement("input");
+  noteInp.type = "text";
+  noteInp.className = "todo-note";
+  noteInp.placeholder = "Notes";
+  noteInp.value = task.note || "";
+  noteInp.maxLength = 500;
+  noteInp.setAttribute("aria-label", "Task notes");
+  noteInp.addEventListener("input", scheduleTodoSave);
+  catNoteControls.appendChild(catMount);
+  catNoteControls.appendChild(noteInp);
+  catRow.appendChild(catNoteControls);
 
   const prRow = document.createElement("div");
   prRow.className = "chip-row";
@@ -1033,6 +1047,7 @@ function renderTodoBoard(data) {
         createTodoRow({
           id: newTaskId(),
           text: "",
+          note: "",
           priority: "none",
           deadline: null,
           done: false,

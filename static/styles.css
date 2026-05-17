@@ -374,6 +374,35 @@ body {
   min-width: 0;
 }
 
+.category-note-row {
+  align-items: stretch;
+}
+
+.category-note-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-note {
+  width: 100%;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #faf8f4;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.todo-note::placeholder {
+  color: var(--muted);
+}
+
 .custom-dd {
   position: relative;
   width: 100%;
@@ -807,6 +836,12 @@ textarea:focus,
   .chip-hint {
     width: 3.75rem;
     flex-shrink: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .category-note-controls {
+    grid-template-columns: 1fr;
   }
 }
 

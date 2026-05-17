@@ -165,6 +165,7 @@ def _normalize_task(obj) -> dict:
         return {
             "id": _new_task_id(),
             "text": t,
+            "note": "",
             "priority": "none",
             "deadline": None,
             "done": False,
@@ -196,7 +197,16 @@ def _normalize_task(obj) -> dict:
     tid = str(obj.get("id") or "").strip()
     if not tid:
         tid = _new_task_id()
-    return {"id": tid, "text": text, "priority": pr, "deadline": dl, "done": done, "category": cat}
+    note = str(obj.get("note", "")).strip()[:500]
+    return {
+        "id": tid,
+        "text": text,
+        "note": note,
+        "priority": pr,
+        "deadline": dl,
+        "done": done,
+        "category": cat,
+    }
 
 
 def _normalize_day_tasks(raw) -> list[dict]:
@@ -541,6 +551,7 @@ def save_todos():
         {
             "id": _new_task_id(),
             "text": t,
+            "note": "",
             "priority": "none",
             "deadline": None,
             "done": False,
