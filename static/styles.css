@@ -372,6 +372,7 @@ body {
 .todo-category-dd-mount {
   flex: 1;
   min-width: 0;
+  display: flex;
 }
 
 .category-note-row {
@@ -385,6 +386,7 @@ body {
   flex: 1;
   min-width: 0;
   align-items: stretch;
+  align-self: stretch;
 }
 
 .todo-note {
@@ -399,6 +401,7 @@ body {
   font-size: 0.72rem;
   line-height: 1.35;
   height: 100%;
+  align-self: stretch;
   min-height: 2.18rem;
 }
 
@@ -487,6 +490,11 @@ body {
   padding: 0.35rem 0.5rem;
   font-size: 0.72rem;
   min-height: 2.18rem;
+}
+
+.todo-category-dd-mount .custom-dd,
+.todo-category-dd-mount .custom-dd-btn {
+  height: 100%;
 }
 
 .custom-dd-compact .custom-dd-list {
@@ -764,6 +772,17 @@ textarea:focus,
 
 .scribble-pane {
   margin-bottom: 0.2rem;
+}
+
+.scribble-toggle .pane-toggle-icon::before {
+  content: "▾";
+  font-size: 0.76rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.scribble-toggle[aria-expanded="false"] .pane-toggle-icon::before {
+  content: "▸";
 }
 
 .scribble-body.pane-collapsed {

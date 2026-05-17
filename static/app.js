@@ -963,7 +963,13 @@ function createScribblePane(text) {
   headBtn.type = "button";
   headBtn.className = "todo-pane-toggle scribble-toggle";
   headBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
-  headBtn.textContent = "Scribble";
+  const headLabel = document.createElement("span");
+  headLabel.textContent = "Scribble";
+  const headIcon = document.createElement("span");
+  headIcon.className = "pane-toggle-icon";
+  headIcon.setAttribute("aria-hidden", "true");
+  headBtn.appendChild(headLabel);
+  headBtn.appendChild(headIcon);
 
   const body = document.createElement("div");
   body.className = "scribble-body" + (expanded ? "" : " pane-collapsed");
