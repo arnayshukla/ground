@@ -239,6 +239,18 @@ body {
   font-weight: 400;
 }
 
+.deadline-display.is-urgent {
+  border-color: #e6b8af;
+  background: #f4cccc;
+  color: #990000;
+}
+
+.deadline-display.is-later {
+  border-color: #b6d7a8;
+  background: #d9ead3;
+  color: #274e13;
+}
+
 .deadline-display:hover {
   border-color: #c9bfb2;
 }

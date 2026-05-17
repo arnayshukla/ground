@@ -117,6 +117,8 @@ function buildDeadlineRow(task, rowForReorder) {
     const v = dateInp.value;
     display.textContent = fmtDeadlineDisplay(v);
     display.classList.toggle("is-placeholder", !v);
+    display.classList.toggle("is-urgent", Boolean(v) && daysFromTodayTo(v) <= 3);
+    display.classList.toggle("is-later", Boolean(v) && daysFromTodayTo(v) > 3);
   }
 
   display.title =
