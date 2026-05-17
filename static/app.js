@@ -69,8 +69,13 @@ function fmtDeadlineLabel(iso) {
 }
 
 function fmtDeadlineRemaining(iso) {
-  if (!iso) return "—";
-  return `${daysFromTodayTo(iso)}d`;
+  if (!iso) return "";
+  return `${daysFromTodayTo(iso)}d left`;
+}
+
+function fmtDeadlineDisplay(iso) {
+  if (!iso) return "None";
+  return `${fmtDeadlineLabel(iso)} - ${fmtDeadlineRemaining(iso)}`;
 }
 
 function openDatePicker(input) {
@@ -106,9 +111,6 @@ function buildDeadlineRow(task, rowForReorder) {
   calBtn.setAttribute("aria-label", "Open calendar");
   calBtn.innerHTML = calendarIconSvg();
 
-  const countdown = document.createElement("span");
-  countdown.className = "deadline-countdown";
-
   const dateInp = document.createElement("input");
   dateInp.type = "date";
   dateInp.className = "due-date sr-picker";
@@ -117,9 +119,8 @@ function buildDeadlineRow(task, rowForReorder) {
 
   function sync() {
     const v = dateInp.value;
-    display.textContent = fmtDeadlineLabel(v);
+    display.textContent = fmtDeadlineDisplay(v);
     display.classList.toggle("is-placeholder", !v);
-    countdown.textContent = fmtDeadlineRemaining(v);
   }
 
   display.title =
@@ -146,7 +147,6 @@ function buildDeadlineRow(task, rowForReorder) {
 
   cluster.appendChild(display);
   cluster.appendChild(calBtn);
-  cluster.appendChild(countdown);
   dueRow.appendChild(cluster);
   dueRow.appendChild(dateInp);
   sync();

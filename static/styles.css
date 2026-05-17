@@ -215,10 +215,10 @@ body {
 }
 
 .deadline-display {
-  flex: 0 0 7.75rem;
-  width: 7.75rem;
-  min-width: 7.75rem;
-  max-width: 7.75rem;
+  flex: 0 0 10.75rem;
+  width: 10.75rem;
+  min-width: 10.75rem;
+  max-width: 10.75rem;
   border: 1px solid var(--border);
   background: #faf8f4;
   border-radius: 8px;
@@ -267,19 +267,6 @@ body {
 
 .btn-calendar svg {
   display: block;
-}
-
-.deadline-countdown {
-  flex: 0 0 2.75rem;
-  width: 2.75rem;
-  min-width: 2.75rem;
-  max-width: 2.75rem;
-  text-align: center;
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: var(--muted);
-  line-height: 2.25rem;
 }
 
 .sr-picker {
