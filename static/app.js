@@ -526,15 +526,45 @@ function countOpenInList(list) {
 
 function refreshAllPaneTitles() {
   document.querySelectorAll(".todo-pane").forEach((section) => {
-    const head = section.querySelector(".todo-pane-toggle");
+    const title = section.querySelector(".todo-pane-title");
+    const toggle = section.querySelector(".todo-pane-toggle");
     const list = section.querySelector(".todo-list-inner");
-    if (!head || !list) return;
+    if (!title || !toggle || !list) return;
     const which = section.dataset.which;
-    const expanded = head.getAttribute("aria-expanded") === "true";
+    const expanded = toggle.getAttribute("aria-expanded") === "true";
     const n = countOpenInList(list);
     const base = labelForWhich(which);
-    head.textContent = expanded ? base : `${base} (${n})`;
+    title.textContent = expanded || n === 0 ? base : `${base} (${n})`;
   });
+}
+
+function setTodoPaneExpanded(section, expanded) {
+  const body = section.querySelector(".todo-pane-body");
+  const toggle = section.querySelector(".todo-pane-toggle");
+  const which = section.dataset.which;
+  if (!body || !toggle || !which) return;
+  toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+  body.classList.toggle("pane-collapsed", !expanded);
+  localStorage.setItem(`ground.todo.pane.${which}.collapsed`, expanded ? "0" : "1");
+  refreshAllPaneTitles();
+}
+
+function addTaskToPane(section, list) {
+  setTodoPaneExpanded(section, true);
+  const row = createTodoRow({
+    id: newTaskId(),
+    text: "",
+    note: "",
+    priority: "none",
+    deadline: null,
+    done: false,
+    category: defaultCategoryId(),
+  });
+  list.appendChild(row);
+  row.querySelector(".todo-text")?.focus();
+  row.scrollIntoView({ behavior: "smooth", block: "center" });
+  refreshAllPaneTitles();
+  scheduleTodoSave();
 }
 
 function wireListDragDrop(list, section) {
@@ -546,9 +576,7 @@ function wireListDragDrop(list, section) {
     e.preventDefault();
     const row = draggingTodoRow;
     if (!row) return;
-    const addBtn = list.querySelector(".add-task");
-    if (!addBtn) return;
-    list.insertBefore(row, addBtn);
+    list.appendChild(row);
     reorderTodoPaneFromRow(row);
     scheduleTodoSave();
   });
@@ -560,10 +588,7 @@ function wireListDragDrop(list, section) {
     const which = section.dataset.which;
     if (!body || !head || !which) return;
     if (!body.classList.contains("pane-collapsed")) return;
-    body.classList.remove("pane-collapsed");
-    head.setAttribute("aria-expanded", "true");
-    localStorage.setItem(`ground.todo.pane.${which}.collapsed`, "0");
-    refreshAllPaneTitles();
+    setTodoPaneExpanded(section, true);
   });
 }
 
@@ -778,14 +803,13 @@ function readTaskLogFormBody() {
 function reorderTodoPaneFromRow(row) {
   const list = row.closest(".todo-list-inner");
   if (!list) return;
-  const addBtn = list.querySelector(".add-task");
   const rows = [...list.querySelectorAll(".todo-row")];
   if (rows.length < 2) {
     refreshAllPaneTitles();
     return;
   }
   rows.sort((ra, rb) => compareTasksBySort(rowToTask(ra), rowToTask(rb)));
-  rows.forEach((r) => list.insertBefore(r, addBtn));
+  rows.forEach((r) => list.appendChild(r));
   refreshAllPaneTitles();
 }
 
@@ -913,14 +937,14 @@ function createTodoRow(task) {
   noteInp.addEventListener("input", scheduleTodoSave);
 
   const prRow = document.createElement("div");
-  prRow.className = "chip-row";
+  prRow.className = "chip-row priority-row";
   const prVal = (task.priority || "none").toLowerCase();
-  ["p1", "p2", "p3", "none"].forEach((p) => {
+  ["p1", "p2", "p3"].forEach((p) => {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "chip pri" + (prVal === p ? " active" : "") + ` p-${p}`;
     b.setAttribute("data-v", p);
-    b.textContent = p === "none" ? "—" : p.toUpperCase();
+    b.textContent = p.toUpperCase();
     b.addEventListener("click", () => {
       prRow.querySelectorAll(".chip.pri").forEach((x) => x.classList.remove("active"));
       b.classList.add("active");
@@ -1069,59 +1093,47 @@ function renderTodoBoard(data) {
     section.className = "todo-pane";
     section.dataset.which = which;
 
+    const tasks = data[which] || [];
+    const storedCollapsed = localStorage.getItem(`ground.todo.pane.${which}.collapsed`);
     const expanded =
-      localStorage.getItem(`ground.todo.pane.${which}.collapsed`) !== "1";
+      storedCollapsed === null
+        ? which === "today" && tasks.length > 0
+        : storedCollapsed !== "1";
+
+    const header = document.createElement("div");
+    header.className = "todo-pane-header";
 
     const headBtn = document.createElement("button");
     headBtn.type = "button";
     headBtn.className = "todo-pane-toggle";
     headBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
+    headBtn.innerHTML = `<span class="pane-toggle-icon" aria-hidden="true"></span><span class="todo-pane-title"></span>`;
+
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "add-task";
+    addBtn.setAttribute("aria-label", `Add ${labelForWhich(which).toLowerCase()} intention`);
+    addBtn.title = `Add ${labelForWhich(which).toLowerCase()} intention`;
+    addBtn.textContent = "+";
 
     const body = document.createElement("div");
     body.className = "todo-pane-body" + (expanded ? "" : " pane-collapsed");
 
     const list = document.createElement("div");
     list.className = "todo-list-inner";
-    const tasks = data[which] || [];
     tasks.forEach((t) => list.appendChild(createTodoRow(t)));
 
-    const addBtn = document.createElement("button");
-    addBtn.type = "button";
-    addBtn.className = "ghost add-task";
-    addBtn.textContent = "Add a line";
-    addBtn.addEventListener("click", () => {
-      list.insertBefore(
-        createTodoRow({
-          id: newTaskId(),
-          text: "",
-          note: "",
-          priority: "none",
-          deadline: null,
-          done: false,
-          category: defaultCategoryId(),
-        }),
-        addBtn
-      );
-      const rows = list.querySelectorAll(".todo-row");
-      rows[rows.length - 1]?.querySelector(".todo-text")?.focus();
-      const last = rows[rows.length - 1];
-      if (last) reorderTodoPaneFromRow(last);
-      refreshAllPaneTitles();
-      scheduleTodoSave();
-    });
-    list.appendChild(addBtn);
+    addBtn.addEventListener("click", () => addTaskToPane(section, list));
 
     headBtn.addEventListener("click", () => {
       const isOpen = headBtn.getAttribute("aria-expanded") === "true";
-      const next = !isOpen;
-      headBtn.setAttribute("aria-expanded", next ? "true" : "false");
-      body.classList.toggle("pane-collapsed", !next);
-      localStorage.setItem(`ground.todo.pane.${which}.collapsed`, next ? "0" : "1");
-      refreshAllPaneTitles();
+      setTodoPaneExpanded(section, !isOpen);
     });
 
     body.appendChild(list);
-    section.appendChild(headBtn);
+    header.appendChild(headBtn);
+    header.appendChild(addBtn);
+    section.appendChild(header);
     section.appendChild(body);
 
     wireListDragDrop(list, section);
