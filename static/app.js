@@ -988,8 +988,8 @@ function createScribblePane(text) {
   const headIcon = document.createElement("span");
   headIcon.className = "pane-toggle-icon";
   headIcon.setAttribute("aria-hidden", "true");
-  headBtn.appendChild(headLabel);
   headBtn.appendChild(headIcon);
+  headBtn.appendChild(headLabel);
 
   const body = document.createElement("div");
   body.className = "scribble-body" + (expanded ? "" : " pane-collapsed");

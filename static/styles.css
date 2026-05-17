@@ -768,7 +768,7 @@ textarea:focus,
 
 .scribble-toggle {
   width: 100%;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .scribble-toggle[aria-expanded="false"] .pane-toggle-icon::before {
