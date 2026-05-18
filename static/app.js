@@ -216,6 +216,16 @@ function projectLabels(ids) {
   return (ids || []).map(projectLabel);
 }
 
+function closeAllProjectPickers() {
+  document.querySelectorAll(".project-picker.is-open").forEach((wrap) => {
+    wrap.classList.remove("is-open");
+    const btn = wrap.querySelector(".project-picker-btn");
+    if (btn) btn.setAttribute("aria-expanded", "false");
+    const menu = wrap.querySelector(".project-picker-menu");
+    if (menu) menu.classList.add("hidden");
+  });
+}
+
 function closeAllCustomDd() {
   document.querySelectorAll(".custom-dd.is-open").forEach((wrap) => {
     wrap.classList.remove("is-open");
@@ -294,6 +304,7 @@ function mountCustomDd(container, { hiddenId, hiddenClass, initialValue, compact
     e.stopPropagation();
     const opening = !wrap.classList.contains("is-open");
     closeAllCustomDd();
+    closeAllProjectPickers();
     if (opening) {
       wrap.classList.add("is-open");
       ul.classList.remove("hidden");
@@ -325,14 +336,29 @@ function mountProjectPicker(container, { selectedIds = [], compact = false, onCh
   container.className = ["project-picker", compact ? "project-picker-compact" : ""]
     .filter(Boolean)
     .join(" ");
+  container.addEventListener("click", (e) => e.stopPropagation());
 
-  if (!opts.length) {
-    const empty = document.createElement("span");
-    empty.className = "project-picker-empty";
-    empty.textContent = "No projects";
-    container.appendChild(empty);
-    return;
-  }
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "project-picker-btn";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  const triggerLabel = document.createElement("span");
+  triggerLabel.className = "project-picker-label";
+  const caret = document.createElement("span");
+  caret.className = "custom-dd-caret";
+  caret.setAttribute("aria-hidden", "true");
+  caret.textContent = "▾";
+  trigger.appendChild(triggerLabel);
+  trigger.appendChild(caret);
+
+  const selectedWrap = document.createElement("div");
+  selectedWrap.className = "project-selected-chips";
+
+  const menu = document.createElement("div");
+  menu.className = "project-picker-menu hidden";
+  menu.setAttribute("role", "listbox");
+  menu.setAttribute("aria-multiselectable", "true");
 
   function syncHidden() {
     container.querySelectorAll("input.project-id").forEach((input) => input.remove());
@@ -345,33 +371,72 @@ function mountProjectPicker(container, { selectedIds = [], compact = false, onCh
     });
   }
 
+  function syncDisplay() {
+    const ids = [...selected];
+    triggerLabel.textContent = ids.length ? `${ids.length} project${ids.length === 1 ? "" : "s"} selected` : "No Project Selected";
+    selectedWrap.innerHTML = "";
+    ids.forEach((id) => {
+      const chip = document.createElement("span");
+      chip.className = "project-selected-chip";
+      chip.textContent = projectLabel(id);
+      selectedWrap.appendChild(chip);
+    });
+    menu.querySelectorAll(".project-option").forEach((option) => {
+      const active = selected.has(option.dataset.projectId);
+      option.classList.toggle("active", active);
+      option.setAttribute("aria-selected", active ? "true" : "false");
+    });
+  }
+
+  trigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const opening = !container.classList.contains("is-open");
+    closeAllCustomDd();
+    closeAllProjectPickers();
+    if (opening) {
+      container.classList.add("is-open");
+      menu.classList.remove("hidden");
+      trigger.setAttribute("aria-expanded", "true");
+    }
+  });
+
+  if (!opts.length) {
+    const empty = document.createElement("div");
+    empty.className = "project-picker-empty";
+    empty.textContent = "Create a project in Settings";
+    menu.appendChild(empty);
+  }
+
   opts.forEach((project) => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "project-chip";
-    chip.dataset.projectId = project.id;
-    chip.textContent = project.name || project.id;
-    chip.title = project.name || project.id;
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "project-option";
+    option.dataset.projectId = project.id;
+    option.setAttribute("role", "option");
+    option.textContent = project.name || project.id;
+    option.title = project.name || project.id;
     const active = selected.has(project.id);
-    chip.classList.toggle("active", active);
-    chip.classList.toggle("is-inactive", !isProjectSelectable(project));
-    chip.setAttribute("aria-pressed", active ? "true" : "false");
-    chip.addEventListener("click", () => {
+    option.classList.toggle("active", active);
+    option.classList.toggle("is-inactive", !isProjectSelectable(project));
+    option.setAttribute("aria-selected", active ? "true" : "false");
+    option.addEventListener("click", () => {
       if (selected.has(project.id)) {
         selected.delete(project.id);
       } else {
         selected.add(project.id);
       }
-      const nowActive = selected.has(project.id);
-      chip.classList.toggle("active", nowActive);
-      chip.setAttribute("aria-pressed", nowActive ? "true" : "false");
       syncHidden();
+      syncDisplay();
       if (onChange) onChange([...selected]);
     });
-    container.appendChild(chip);
+    menu.appendChild(option);
   });
 
+  container.appendChild(trigger);
+  container.appendChild(selectedWrap);
+  container.appendChild(menu);
   syncHidden();
+  syncDisplay();
 }
 
 function mountTimeProjectPicker(selectedIds = []) {
@@ -382,7 +447,10 @@ function mountTimeProjectPicker(selectedIds = []) {
   });
 }
 
-document.addEventListener("click", closeAllCustomDd);
+document.addEventListener("click", () => {
+  closeAllCustomDd();
+  closeAllProjectPickers();
+});
 
 function showAppMessage(message) {
   const modal = $("app-message-modal");
@@ -417,7 +485,7 @@ function openSettingsModal() {
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
   document.body.classList.add("modal-open");
-  $("settings-category-new")?.focus();
+  $("settings-project-new-name")?.focus();
 }
 
 function closeSettingsModal() {
@@ -433,6 +501,26 @@ function closeSettingsModal() {
   ) {
     document.body.classList.remove("modal-open");
   }
+}
+
+function setSettingsSectionExpanded(which, expanded) {
+  const toggle = $(`settings-${which}-toggle`);
+  const body = $(`settings-${which}-body`);
+  if (!toggle || !body) return;
+  toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+  body.classList.toggle("pane-collapsed", !expanded);
+  localStorage.setItem(`ground.settings.${which}.collapsed`, expanded ? "0" : "1");
+}
+
+function initSettingsSectionToggle(which) {
+  const toggle = $(`settings-${which}-toggle`);
+  if (!toggle) return;
+  const expanded = localStorage.getItem(`ground.settings.${which}.collapsed`) !== "1";
+  setSettingsSectionExpanded(which, expanded);
+  toggle.addEventListener("click", () => {
+    const isOpen = toggle.getAttribute("aria-expanded") === "true";
+    setSettingsSectionExpanded(which, !isOpen);
+  });
 }
 
 function setCategories(nextCategories) {
@@ -463,6 +551,58 @@ async function refreshProjectsFromServer() {
   const today = await api("/api/today");
   renderEntries(today.entries || []);
   await loadTodos();
+}
+
+function mountSettingsDateControl(container, { value, placeholder, ariaLabel, onChange }) {
+  if (!container) return;
+  container.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "settings-date-control";
+
+  const display = document.createElement("button");
+  display.type = "button";
+  display.className = "deadline-display settings-date-display";
+
+  const calBtn = document.createElement("button");
+  calBtn.type = "button";
+  calBtn.className = "btn-calendar";
+  calBtn.setAttribute("aria-label", ariaLabel);
+  calBtn.innerHTML = calendarIconSvg();
+
+  const input = document.createElement("input");
+  input.type = "date";
+  input.className = "sr-picker settings-date-input";
+  input.value = value || "";
+  input.setAttribute("aria-label", ariaLabel);
+
+  function sync() {
+    display.textContent = input.value ? fmtDeadlineLabel(input.value) : placeholder;
+    display.classList.toggle("is-placeholder", !input.value);
+  }
+
+  display.addEventListener("click", () => {
+    if (input.value && placeholder !== "Start date") {
+      input.value = "";
+      sync();
+      if (onChange) onChange("");
+    } else {
+      openDatePicker(input);
+    }
+  });
+  calBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    openDatePicker(input);
+  });
+  input.addEventListener("change", () => {
+    sync();
+    if (onChange) onChange(input.value);
+  });
+
+  wrap.appendChild(display);
+  wrap.appendChild(calBtn);
+  wrap.appendChild(input);
+  container.appendChild(wrap);
+  sync();
 }
 
 function renderCategorySettings() {
@@ -575,17 +715,11 @@ function renderProjectSettings() {
     nameInput.maxLength = 100;
     nameInput.setAttribute("aria-label", `Rename ${project.name || project.id}`);
 
-    const startInput = document.createElement("input");
-    startInput.type = "date";
-    startInput.className = "settings-project-date";
-    startInput.value = project.start_date || todayIso || "";
-    startInput.setAttribute("aria-label", `${project.name || project.id} start date`);
+    const startMount = document.createElement("div");
+    startMount.className = "settings-project-date-mount";
 
-    const endInput = document.createElement("input");
-    endInput.type = "date";
-    endInput.className = "settings-project-date";
-    endInput.value = project.end_date || "";
-    endInput.setAttribute("aria-label", `${project.name || project.id} end date`);
+    const endMount = document.createElement("div");
+    endMount.className = "settings-project-date-mount";
 
     const archiveLabel = document.createElement("label");
     archiveLabel.className = "settings-category-toggle";
@@ -630,19 +764,27 @@ function renderProjectSettings() {
         nameInput.blur();
       }
     });
-    startInput.addEventListener("change", () => {
-      updateProject({ start_date: startInput.value });
-    });
-    endInput.addEventListener("change", () => {
-      updateProject({ end_date: endInput.value || null });
-    });
     archiveInput.addEventListener("change", () => {
       updateProject({ archived: !archiveInput.checked });
     });
+    mountSettingsDateControl(startMount, {
+      value: project.start_date || todayIso || "",
+      placeholder: "Start date",
+      ariaLabel: `${project.name || project.id} start date`,
+      onChange: (value) => {
+        if (value) updateProject({ start_date: value });
+      },
+    });
+    mountSettingsDateControl(endMount, {
+      value: project.end_date || "",
+      placeholder: "End date",
+      ariaLabel: `${project.name || project.id} end date`,
+      onChange: (value) => updateProject({ end_date: value || null }),
+    });
 
     row.appendChild(nameInput);
-    row.appendChild(startInput);
-    row.appendChild(endInput);
+    row.appendChild(startMount);
+    row.appendChild(endMount);
     row.appendChild(archiveLabel);
     list.appendChild(row);
   });
@@ -1278,8 +1420,16 @@ function createTodoRow(task) {
   const metaControls = document.createElement("div");
   metaControls.className = "todo-meta-controls";
 
-  const catRow = document.createElement("div");
-  catRow.className = "chip-row";
+  const selectRow = document.createElement("div");
+  selectRow.className = "todo-select-row";
+  const projectMount = document.createElement("div");
+  projectMount.className = "todo-project-mount";
+  mountProjectPicker(projectMount, {
+    selectedIds: task.project_ids || task.projectIds || [],
+    compact: true,
+    onChange: () => scheduleTodoSave(),
+  });
+
   const catMount = document.createElement("div");
   catMount.className = "todo-category-dd-mount";
   mountCustomDd(catMount, {
@@ -1291,18 +1441,8 @@ function createTodoRow(task) {
       scheduleTodoSave();
     },
   });
-  catRow.appendChild(catMount);
-
-  const projectRow = document.createElement("div");
-  projectRow.className = "chip-row";
-  const projectMount = document.createElement("div");
-  projectMount.className = "todo-project-mount";
-  mountProjectPicker(projectMount, {
-    selectedIds: task.project_ids || task.projectIds || [],
-    compact: true,
-    onChange: () => scheduleTodoSave(),
-  });
-  projectRow.appendChild(projectMount);
+  selectRow.appendChild(projectMount);
+  selectRow.appendChild(catMount);
 
   const noteInp = document.createElement("textarea");
   noteInp.className = "todo-note";
@@ -1330,8 +1470,7 @@ function createTodoRow(task) {
     prRow.appendChild(b);
   });
 
-  metaControls.appendChild(catRow);
-  metaControls.appendChild(projectRow);
+  metaControls.appendChild(selectRow);
   metaControls.appendChild(prRow);
   metaControls.appendChild(buildDeadlineRow(task, row));
   meta.appendChild(metaControls);
@@ -1880,11 +2019,18 @@ async function init() {
     }
   });
 
-  $("settings-project-new-start").value = todayIso || "";
+  initSettingsSectionToggle("projects");
+  initSettingsSectionToggle("categories");
+  mountSettingsDateControl($("settings-project-new-start-mount"), {
+    value: todayIso || "",
+    placeholder: "Start date",
+    ariaLabel: "Project start date",
+    onChange: null,
+  });
   $("settings-project-form")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const nameInput = $("settings-project-new-name");
-    const startInput = $("settings-project-new-start");
+    const startInput = $("settings-project-new-start-mount")?.querySelector(".settings-date-input");
     const name = nameInput?.value.trim() || "";
     const start_date = startInput?.value || todayIso;
     if (!name) return;
@@ -1894,7 +2040,12 @@ async function init() {
         body: JSON.stringify({ name, start_date }),
       });
       if (nameInput) nameInput.value = "";
-      if (startInput) startInput.value = todayIso || "";
+      mountSettingsDateControl($("settings-project-new-start-mount"), {
+        value: todayIso || "",
+        placeholder: "Start date",
+        ariaLabel: "Project start date",
+        onChange: null,
+      });
       setProjects(data.projects || []);
       mountTimeProjectPicker(projectIdsFrom($("time-project-mount")));
       renderProjectSettings();

@@ -406,6 +406,7 @@ body {
 }
 
 .project-picker {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
@@ -424,7 +425,45 @@ body {
   background: transparent;
 }
 
-.project-chip {
+.project-picker-btn {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.2rem;
+  border: 1px solid var(--border);
+  background: #faf8f4;
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 0.42rem 0.55rem;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.project-picker-compact .project-picker-btn {
+  min-height: 2.05rem;
+  font-size: 0.72rem;
+}
+
+.project-picker-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.project-selected-chip,
+.project-option {
   max-width: 100%;
   min-width: 0;
   border: 1px solid var(--border);
@@ -436,20 +475,44 @@ body {
   font-size: 0.68rem;
   font-weight: 600;
   line-height: 1.2;
-  cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.project-chip.active {
+.project-selected-chip,
+.project-option.active {
   border-color: var(--accent-line);
   color: var(--accent-hover);
   background: var(--accent-soft);
 }
 
-.project-chip.is-inactive {
+.project-option {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-option.is-inactive {
   border-style: dashed;
+}
+
+.project-picker-menu {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  max-height: 12rem;
+  overflow-y: auto;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: 0 12px 30px rgba(61, 56, 50, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
 
 .project-picker-empty {
@@ -460,7 +523,7 @@ body {
 .todo-note {
   width: 100%;
   min-width: 0;
-  min-height: 100%;
+  min-height: 8.25rem;
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -955,6 +1018,13 @@ textarea:focus,
   min-width: 0;
 }
 
+.todo-select-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.45rem;
+  align-items: start;
+}
+
 .chip-row {
   display: flex;
   flex-wrap: wrap;
@@ -980,6 +1050,10 @@ textarea:focus,
 
   .todo-note {
     min-height: 4.5rem;
+  }
+
+  .todo-select-row {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1406,12 +1480,36 @@ body.modal-open {
   border-top: none;
 }
 
-.settings-section h3 {
+.settings-section-toggle {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   margin: 0 0 0.65rem;
+  padding: 0.25rem 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--muted);
+  font-weight: 700;
+}
+
+.settings-section-toggle .pane-toggle-icon::before {
+  content: "▾";
+  font-size: 0.76rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.settings-section-toggle[aria-expanded="false"] .pane-toggle-icon::before {
+  content: "▸";
+}
+
+.settings-section-body.pane-collapsed {
+  display: none;
 }
 
 .settings-category-list,
@@ -1430,13 +1528,28 @@ body.modal-open {
 }
 
 .settings-project-row {
-  grid-template-columns: minmax(0, 1fr) minmax(8rem, auto) minmax(8rem, auto) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(9.5rem, auto) minmax(9.5rem, auto) auto;
 }
 
 .settings-category-name,
-.settings-project-name,
-.settings-project-date {
+.settings-project-name {
   min-width: 0;
+}
+
+.settings-project-date-mount,
+.settings-date-mount {
+  min-width: 0;
+}
+
+.settings-date-control {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.settings-date-display {
+  min-height: 2.35rem;
 }
 
 .settings-category-toggle {
@@ -1505,7 +1618,7 @@ body.modal-open {
 }
 
 .settings-project-form {
-  grid-template-columns: minmax(0, 1fr) minmax(8rem, auto) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(9.5rem, auto) auto;
 }
 
 .settings-add-category {

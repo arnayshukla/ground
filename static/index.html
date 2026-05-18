@@ -146,32 +146,42 @@
           </svg>
         </button>
       </div>
-      <section class="settings-section" aria-labelledby="settings-categories-title">
-        <h3 id="settings-categories-title">Categories</h3>
-        <div id="settings-category-list" class="settings-category-list"></div>
-        <form id="settings-category-form" class="settings-category-form">
-          <input type="text" id="settings-category-new" maxlength="80" placeholder="New category" autocomplete="off" />
-          <button type="submit" class="settings-add-category" aria-label="Add category" title="Add category">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M5 12h14"/><path d="M12 5v14"/>
-            </svg>
-          </button>
-        </form>
-        <p class="hint">Removing or disabling a category does not edit existing logged work.</p>
-      </section>
       <section class="settings-section" aria-labelledby="settings-projects-title">
-        <h3 id="settings-projects-title">Projects</h3>
-        <div id="settings-project-list" class="settings-project-list"></div>
-        <form id="settings-project-form" class="settings-project-form">
+        <button type="button" class="settings-section-toggle" id="settings-projects-toggle" aria-expanded="true">
+          <span class="pane-toggle-icon" aria-hidden="true"></span>
+          <span id="settings-projects-title">Projects</span>
+        </button>
+        <div id="settings-projects-body" class="settings-section-body">
+          <div id="settings-project-list" class="settings-project-list"></div>
+          <form id="settings-project-form" class="settings-project-form">
           <input type="text" id="settings-project-new-name" maxlength="100" placeholder="New project" autocomplete="off" />
-          <input type="date" id="settings-project-new-start" aria-label="Project start date" />
+          <div id="settings-project-new-start-mount" class="settings-date-mount"></div>
           <button type="submit" class="settings-add-category" aria-label="Add project" title="Add project">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M5 12h14"/><path d="M12 5v14"/>
             </svg>
           </button>
-        </form>
-        <p class="hint">Add an end date when a project finishes. Finished or archived projects stay visible on old work.</p>
+          </form>
+          <p class="hint">Add an end date when a project finishes. Finished or archived projects stay visible on old work.</p>
+        </div>
+      </section>
+      <section class="settings-section" aria-labelledby="settings-categories-title">
+        <button type="button" class="settings-section-toggle" id="settings-categories-toggle" aria-expanded="true">
+          <span class="pane-toggle-icon" aria-hidden="true"></span>
+          <span id="settings-categories-title">Categories</span>
+        </button>
+        <div id="settings-categories-body" class="settings-section-body">
+          <div id="settings-category-list" class="settings-category-list"></div>
+          <form id="settings-category-form" class="settings-category-form">
+            <input type="text" id="settings-category-new" maxlength="80" placeholder="New category" autocomplete="off" />
+            <button type="submit" class="settings-add-category" aria-label="Add category" title="Add category">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14"/><path d="M12 5v14"/>
+              </svg>
+            </button>
+          </form>
+          <p class="hint">Removing or disabling a category does not edit existing logged work.</p>
+        </div>
       </section>
     </div>
   </div>
