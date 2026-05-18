@@ -41,6 +41,7 @@ PRIORITIES = frozenset({"p1", "p2", "p3", "none"})
 # Undated backlog bucket in todos.json (not a calendar date key).
 FUTURE_KEY = "__future__"
 SCRIBBLE_KEY = "__scribbles__"
+NO_PROJECT_ID = "__no_project__"
 
 app = Flask(__name__, static_folder=str(STATIC), static_url_path="")
 
@@ -220,6 +221,107 @@ def _category_label_by_id() -> dict[str, str]:
     return {c["id"]: c["label"] for c in _load_categories()}
 
 
+def _projects_path() -> Path:
+    data = _data_dir()
+    data.mkdir(parents=True, exist_ok=True)
+    return data / "projects.json"
+
+
+def _slugify_project_id(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    return slug[:48] or f"project_{uuid.uuid4().hex[:8]}"
+
+
+def _parse_iso_date(value, field: str) -> tuple[str | None, str | None]:
+    if value in (None, ""):
+        return None, None
+    try:
+        parsed = date.fromisoformat(str(value)[:10])
+    except ValueError:
+        return None, f"invalid {field}"
+    return parsed.isoformat(), None
+
+
+def _normalize_project(obj) -> dict:
+    if not isinstance(obj, dict):
+        return {}
+    name = str(obj.get("name") or "").strip()
+    if not name:
+        return {}
+    start_date, start_err = _parse_iso_date(obj.get("start_date") or _today().isoformat(), "start_date")
+    if start_err or not start_date:
+        start_date = _today().isoformat()
+    end_date, _ = _parse_iso_date(obj.get("end_date"), "end_date")
+    pid = str(obj.get("id") or "").strip().lower()
+    if not pid:
+        pid = _slugify_project_id(name)
+    pid = re.sub(r"[^a-z0-9_]+", "_", pid).strip("_")[:64]
+    if not pid:
+        pid = _slugify_project_id(name)
+    return {
+        "id": pid,
+        "name": name[:100],
+        "start_date": start_date,
+        "end_date": end_date,
+        "archived": bool(obj.get("archived", False)),
+    }
+
+
+def _dedupe_projects(projects: list[dict]) -> list[dict]:
+    out: list[dict] = []
+    seen: set[str] = set()
+    for raw in projects:
+        project = _normalize_project(raw)
+        if not project:
+            continue
+        base = project["id"]
+        pid = base
+        n = 2
+        while pid in seen:
+            pid = f"{base}_{n}"
+            n += 1
+        project["id"] = pid
+        seen.add(pid)
+        out.append(project)
+    return out
+
+
+def _load_projects() -> list[dict]:
+    p = _projects_path()
+    if not p.exists():
+        return []
+    with open(p, encoding="utf-8") as f:
+        raw = json.load(f)
+    if not isinstance(raw, list):
+        return []
+    return _dedupe_projects(raw)
+
+
+def _save_projects(projects: list[dict]) -> None:
+    with open(_projects_path(), "w", encoding="utf-8") as f:
+        json.dump(_dedupe_projects(projects), f, indent=2)
+
+
+def _project_label_by_id() -> dict[str, str]:
+    return {p["id"]: p["name"] for p in _load_projects()}
+
+
+def _clean_project_ids(raw) -> list[str]:
+    if raw is None:
+        return []
+    values = raw if isinstance(raw, list) else [raw]
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        pid = str(value or "").strip().lower()
+        pid = re.sub(r"[^a-z0-9_]+", "_", pid).strip("_")[:64]
+        if not pid or pid in seen:
+            continue
+        seen.add(pid)
+        out.append(pid)
+    return out
+
+
 def _todos_path() -> Path:
     data = _data_dir()
     data.mkdir(parents=True, exist_ok=True)
@@ -256,6 +358,7 @@ def _normalize_task(obj) -> dict:
             "deadline": None,
             "done": False,
             "category": _default_category_id(),
+            "project_ids": [],
         }
     if not isinstance(obj, dict):
         return {}
@@ -284,6 +387,7 @@ def _normalize_task(obj) -> dict:
     if not tid:
         tid = _new_task_id()
     note = str(obj.get("note", "")).strip()[:500]
+    project_ids = _clean_project_ids(obj.get("project_ids") or obj.get("projectIds"))
     return {
         "id": tid,
         "text": text,
@@ -292,6 +396,7 @@ def _normalize_task(obj) -> dict:
         "deadline": dl,
         "done": done,
         "category": cat,
+        "project_ids": project_ids,
     }
 
 
@@ -455,6 +560,99 @@ def _todo_stats_for_window(store: dict, window_days: int = 30) -> dict:
     }
 
 
+def _project_highlights(days_data: list[dict], store: dict, window_days: int = 30) -> list[dict]:
+    projects = _load_projects()
+    project_by_id = {p["id"]: p for p in projects}
+    rows: dict[str, dict] = {}
+
+    def ensure(pid: str) -> dict:
+        project = project_by_id.get(pid)
+        if pid == NO_PROJECT_ID:
+            label = "No project"
+            active = True
+            start_date = None
+            end_date = None
+        elif project:
+            label = project["name"]
+            end_date = project.get("end_date")
+            active = not project.get("archived") and not end_date
+            start_date = project.get("start_date")
+        else:
+            label = pid
+            active = False
+            start_date = None
+            end_date = None
+        if pid not in rows:
+            rows[pid] = {
+                "id": pid,
+                "label": label,
+                "active": active,
+                "startDate": start_date,
+                "endDate": end_date,
+                "totalMinutes": 0,
+                "entryCount": 0,
+                "openTasks": 0,
+                "doneTasks": 0,
+                "recentNotes": [],
+            }
+        return rows[pid]
+
+    for day in days_data:
+        for entry in day.get("entries", []):
+            pids = _clean_project_ids(entry.get("project_ids") or entry.get("projectIds"))
+            if not pids:
+                pids = [NO_PROJECT_ID]
+            for pid in pids:
+                row = ensure(pid)
+                row["totalMinutes"] += int(entry.get("minutes", 0) or 0)
+                row["entryCount"] += 1
+                note = str(entry.get("note") or "").strip()
+                if note and len(row["recentNotes"]) < 3:
+                    row["recentNotes"].append(
+                        {
+                            "date": day["date"].isoformat(),
+                            "note": note[:160],
+                        }
+                    )
+
+    today = _today()
+    start = today - timedelta(days=window_days - 1)
+    d = start
+    while d <= today:
+        for task in _normalize_day_tasks(store.get(d.isoformat())):
+            pids = _clean_project_ids(task.get("project_ids") or task.get("projectIds"))
+            if not pids:
+                pids = [NO_PROJECT_ID]
+            for pid in pids:
+                row = ensure(pid)
+                if task.get("done"):
+                    row["doneTasks"] += 1
+                else:
+                    row["openTasks"] += 1
+        d += timedelta(days=1)
+
+    for task in _normalize_day_tasks(store.get(FUTURE_KEY)):
+        pids = _clean_project_ids(task.get("project_ids") or task.get("projectIds"))
+        if not pids:
+            pids = [NO_PROJECT_ID]
+        for pid in pids:
+            row = ensure(pid)
+            if task.get("done"):
+                row["doneTasks"] += 1
+            else:
+                row["openTasks"] += 1
+
+    return sorted(
+        rows.values(),
+        key=lambda r: (
+            r["id"] == NO_PROJECT_ID,
+            not r["active"],
+            -(r["totalMinutes"] + r["openTasks"] * 60 + r["doneTasks"] * 20),
+            r["label"].lower(),
+        ),
+    )
+
+
 @app.route("/")
 def index():
     return send_from_directory(STATIC, "index.html")
@@ -471,6 +669,7 @@ def meta():
     return jsonify(
         {
             "categories": _load_categories(),
+            "projects": _load_projects(),
             "today": today.isoformat(),
             "tomorrow": (today + timedelta(days=1)).isoformat(),
         }
@@ -532,6 +731,73 @@ def delete_category(category_id: str):
     return jsonify({"ok": True, "categories": _load_categories()})
 
 
+@app.route("/api/projects", methods=["GET"])
+def get_projects():
+    return jsonify({"projects": _load_projects()})
+
+
+@app.route("/api/projects", methods=["POST"])
+def create_project():
+    body = request.get_json(force=True, silent=True) or {}
+    name = str(body.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "name is required"}), 400
+    start_date, err = _parse_iso_date(body.get("start_date") or body.get("startDate") or _today().isoformat(), "start_date")
+    if err or not start_date:
+        return jsonify({"error": err or "start_date is required"}), 400
+    end_date, err = _parse_iso_date(body.get("end_date") or body.get("endDate"), "end_date")
+    if err:
+        return jsonify({"error": err}), 400
+    projects = _load_projects()
+    existing = {p["id"] for p in projects}
+    base = _slugify_project_id(name)
+    pid = base
+    n = 2
+    while pid in existing:
+        pid = f"{base}_{n}"
+        n += 1
+    projects.append(
+        {
+            "id": pid,
+            "name": name[:100],
+            "start_date": start_date,
+            "end_date": end_date,
+            "archived": bool(body.get("archived", False)),
+        }
+    )
+    _save_projects(projects)
+    return jsonify({"ok": True, "projects": _load_projects()}), 201
+
+
+@app.route("/api/projects/<project_id>", methods=["PUT"])
+def update_project(project_id: str):
+    body = request.get_json(force=True, silent=True) or {}
+    projects = _load_projects()
+    for project in projects:
+        if project["id"] != project_id:
+            continue
+        if "name" in body:
+            name = str(body.get("name") or "").strip()
+            if not name:
+                return jsonify({"error": "name is required"}), 400
+            project["name"] = name[:100]
+        if "start_date" in body or "startDate" in body:
+            start_date, err = _parse_iso_date(body.get("start_date") or body.get("startDate"), "start_date")
+            if err or not start_date:
+                return jsonify({"error": err or "start_date is required"}), 400
+            project["start_date"] = start_date
+        if "end_date" in body or "endDate" in body:
+            end_date, err = _parse_iso_date(body.get("end_date") if "end_date" in body else body.get("endDate"), "end_date")
+            if err:
+                return jsonify({"error": err}), 400
+            project["end_date"] = end_date
+        if "archived" in body:
+            project["archived"] = bool(body.get("archived"))
+        _save_projects(projects)
+        return jsonify({"ok": True, "projects": _load_projects()})
+    return jsonify({"error": "not found"}), 404
+
+
 @app.route("/api/today", methods=["GET"])
 def get_today():
     d = _today()
@@ -569,6 +835,7 @@ def add_entry():
         return jsonify({"error": err}), 400
     category = (body.get("category") or "").strip()
     note = (body.get("note") or "").strip()
+    project_ids = _clean_project_ids(body.get("project_ids") or body.get("projectIds"))
 
     valid = _category_ids(include_disabled=True)
     if category not in valid:
@@ -582,6 +849,7 @@ def add_entry():
         "minutes": total,
         "category": category,
         "note": note,
+        "project_ids": project_ids,
         "logged_at": _now_iso(),
     }
     if isinstance(src, str) and src.strip():
@@ -610,10 +878,15 @@ def update_entry(index: int):
         return jsonify({"error": "not found"}), 404
 
     prev = entries[index]
+    if "project_ids" in body or "projectIds" in body:
+        project_ids = _clean_project_ids(body.get("project_ids") or body.get("projectIds"))
+    else:
+        project_ids = _clean_project_ids(prev.get("project_ids") or prev.get("projectIds"))
     entry: dict = {
         "minutes": total,
         "category": category,
         "note": note,
+        "project_ids": project_ids,
         "logged_at": prev.get("logged_at")
         or _now_iso(),
     }
@@ -723,6 +996,7 @@ def save_todos():
             "deadline": None,
             "done": False,
             "category": _default_category_id(),
+            "project_ids": [],
         }
         for t in cleaned
     ]
@@ -780,7 +1054,7 @@ def _collect_days_for_analytics(max_days: int = 30) -> list[dict]:
     files = sorted(data.glob("*.json"), reverse=True)
     days: list[dict] = []
     for p in files:
-        if p.name in ("todos.json", "categories.json"):
+        if p.name in ("todos.json", "categories.json", "projects.json"):
             continue
         try:
             d = date.fromisoformat(p.stem)
@@ -801,6 +1075,7 @@ def analytics():
     days_data = _collect_days_for_analytics(30)
     store = _load_todos()
     todo_stats = _todo_stats_for_window(store, 30)
+    project_highlights = _project_highlights(days_data, store, 30)
 
     if not days_data:
         return jsonify(
@@ -812,6 +1087,7 @@ def analytics():
                 "byCategory": [],
                 "recentDailyTotals": [],
                 "todoStats": todo_stats,
+                "projectHighlights": project_highlights,
             }
         )
 
@@ -852,6 +1128,7 @@ def analytics():
             "byCategory": by_category,
             "recentDailyTotals": recent_filtered,
             "todoStats": todo_stats,
+            "projectHighlights": project_highlights,
         }
     )
 
@@ -866,7 +1143,7 @@ def history():
     label_by_id = _category_label_by_id()
     days = []
     for p in files:
-        if p.name in ("todos.json", "categories.json"):
+        if p.name in ("todos.json", "categories.json", "projects.json"):
             continue
         try:
             d = date.fromisoformat(p.stem)
