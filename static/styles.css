@@ -378,7 +378,8 @@ body {
 #entry-form.entry-form-stack select,
 #entry-form.entry-form-stack .custom-dd-btn,
 #task-log-form.entry-form-stack input,
-#task-log-form.entry-form-stack .custom-dd-btn {
+#task-log-form.entry-form-stack .custom-dd-btn,
+.project-picker {
   width: 100%;
   min-width: 0;
 }
@@ -397,10 +398,63 @@ body {
   width: 100%;
 }
 
-.todo-category-dd-mount {
+.todo-category-dd-mount,
+.todo-project-mount {
   flex: 1;
   min-width: 0;
   display: flex;
+}
+
+.project-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  min-height: 2.35rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #faf8f4;
+}
+
+.project-picker-compact {
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.project-chip {
+  max-width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.22rem 0.5rem;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-chip.active {
+  border-color: var(--accent-line);
+  color: var(--accent-hover);
+  background: var(--accent-soft);
+}
+
+.project-chip.is-inactive {
+  border-style: dashed;
+}
+
+.project-picker-empty {
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
 .todo-note {
@@ -609,6 +663,14 @@ textarea:focus,
   color: var(--muted);
   font-size: 0.82rem;
   margin-top: 0.12rem;
+}
+
+.entry-projects {
+  margin-top: 0.2rem;
+  color: var(--accent-hover);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .entry-min {
@@ -1179,6 +1241,57 @@ textarea:focus,
   margin: 0 0 0.65rem;
 }
 
+.analytics-projects {
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.25rem;
+}
+
+.project-highlight {
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.project-highlight:last-child {
+  border-bottom: none;
+}
+
+.project-highlight.is-inactive {
+  opacity: 0.72;
+}
+
+.project-highlight-head,
+.project-highlight-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.project-highlight-head {
+  margin-bottom: 0.35rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.project-highlight-head span:last-child,
+.project-highlight-meta {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.project-highlight-meta {
+  margin-top: 0.35rem;
+}
+
+.project-highlight-notes {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .analytics-bar .bar-stat {
   font-size: 0.75rem;
   color: var(--muted);
@@ -1281,6 +1394,18 @@ body.modal-open {
   margin: 0;
 }
 
+.settings-section {
+  padding-top: 0.85rem;
+  margin-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.settings-section:first-of-type {
+  padding-top: 0;
+  margin-top: 0;
+  border-top: none;
+}
+
 .settings-section h3 {
   margin: 0 0 0.65rem;
   font-size: 0.78rem;
@@ -1289,20 +1414,28 @@ body.modal-open {
   color: var(--muted);
 }
 
-.settings-category-list {
+.settings-category-list,
+.settings-project-list {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
 }
 
-.settings-category-row {
+.settings-category-row,
+.settings-project-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.5rem;
 }
 
-.settings-category-name {
+.settings-project-row {
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, auto) minmax(8rem, auto) auto;
+}
+
+.settings-category-name,
+.settings-project-name,
+.settings-project-date {
   min-width: 0;
 }
 
@@ -1363,11 +1496,16 @@ body.modal-open {
   height: 2rem;
 }
 
-.settings-category-form {
+.settings-category-form,
+.settings-project-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.5rem;
   margin-top: 0.8rem;
+}
+
+.settings-project-form {
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, auto) auto;
 }
 
 .settings-add-category {
@@ -1401,7 +1539,9 @@ body.modal-open {
     align-items: stretch;
   }
 
-  .settings-category-form {
+  .settings-project-row,
+  .settings-category-form,
+  .settings-project-form {
     grid-template-columns: 1fr;
   }
 }

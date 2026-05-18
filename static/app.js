@@ -2,6 +2,8 @@ const $ = (id) => document.getElementById(id);
 
 let categories = [];
 let labelById = {};
+let projects = [];
+let projectLabelById = {};
 let todayIso = "";
 let tomorrowIso = "";
 
@@ -184,6 +186,36 @@ function defaultCategoryId() {
   return categories.find((c) => c.enabled !== false)?.id || categories[0]?.id || "deep_work";
 }
 
+function isProjectSelectable(project) {
+  return project && !project.archived && !project.end_date;
+}
+
+function projectOptions(selectedIds = []) {
+  const selected = new Set(selectedIds || []);
+  const opts = projects.filter((p) => isProjectSelectable(p) || selected.has(p.id));
+  selected.forEach((id) => {
+    if (!opts.some((p) => p.id === id)) {
+      opts.push({ id, name: id, start_date: null, end_date: null, archived: true, missing: true });
+    }
+  });
+  return opts;
+}
+
+function projectIdsFrom(container) {
+  if (!container) return [];
+  return [...container.querySelectorAll("input.project-id")]
+    .map((input) => input.value)
+    .filter(Boolean);
+}
+
+function projectLabel(id) {
+  return projectLabelById[id] || id;
+}
+
+function projectLabels(ids) {
+  return (ids || []).map(projectLabel);
+}
+
 function closeAllCustomDd() {
   document.querySelectorAll(".custom-dd.is-open").forEach((wrap) => {
     wrap.classList.remove("is-open");
@@ -285,6 +317,71 @@ function mountTimeCategoryDd() {
   });
 }
 
+function mountProjectPicker(container, { selectedIds = [], compact = false, onChange = null } = {}) {
+  if (!container) return;
+  const selected = new Set((selectedIds || []).filter(Boolean));
+  const opts = projectOptions([...selected]);
+  container.innerHTML = "";
+  container.className = ["project-picker", compact ? "project-picker-compact" : ""]
+    .filter(Boolean)
+    .join(" ");
+
+  if (!opts.length) {
+    const empty = document.createElement("span");
+    empty.className = "project-picker-empty";
+    empty.textContent = "No projects";
+    container.appendChild(empty);
+    return;
+  }
+
+  function syncHidden() {
+    container.querySelectorAll("input.project-id").forEach((input) => input.remove());
+    selected.forEach((id) => {
+      const hid = document.createElement("input");
+      hid.type = "hidden";
+      hid.className = "project-id";
+      hid.value = id;
+      container.appendChild(hid);
+    });
+  }
+
+  opts.forEach((project) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "project-chip";
+    chip.dataset.projectId = project.id;
+    chip.textContent = project.name || project.id;
+    chip.title = project.name || project.id;
+    const active = selected.has(project.id);
+    chip.classList.toggle("active", active);
+    chip.classList.toggle("is-inactive", !isProjectSelectable(project));
+    chip.setAttribute("aria-pressed", active ? "true" : "false");
+    chip.addEventListener("click", () => {
+      if (selected.has(project.id)) {
+        selected.delete(project.id);
+      } else {
+        selected.add(project.id);
+      }
+      const nowActive = selected.has(project.id);
+      chip.classList.toggle("active", nowActive);
+      chip.setAttribute("aria-pressed", nowActive ? "true" : "false");
+      syncHidden();
+      if (onChange) onChange([...selected]);
+    });
+    container.appendChild(chip);
+  });
+
+  syncHidden();
+}
+
+function mountTimeProjectPicker(selectedIds = []) {
+  mountProjectPicker($("time-project-mount"), {
+    selectedIds,
+    compact: false,
+    onChange: null,
+  });
+}
+
 document.addEventListener("click", closeAllCustomDd);
 
 function showAppMessage(message) {
@@ -314,6 +411,7 @@ function closeAppMessageModal() {
 
 function openSettingsModal() {
   renderCategorySettings();
+  renderProjectSettings();
   const modal = $("settings-modal");
   if (!modal) return;
   modal.classList.remove("hidden");
@@ -342,11 +440,26 @@ function setCategories(nextCategories) {
   labelById = Object.fromEntries(categories.map((c) => [c.id, c.label]));
 }
 
+function setProjects(nextProjects) {
+  projects = nextProjects || [];
+  projectLabelById = Object.fromEntries(projects.map((p) => [p.id, p.name]));
+}
+
 async function refreshCategoriesFromServer() {
   const data = await api("/api/categories");
   setCategories(data.categories || []);
   mountTimeCategoryDd();
   renderCategorySettings();
+  const today = await api("/api/today");
+  renderEntries(today.entries || []);
+  await loadTodos();
+}
+
+async function refreshProjectsFromServer() {
+  const data = await api("/api/projects");
+  setProjects(data.projects || []);
+  mountTimeProjectPicker(projectIdsFrom($("time-project-mount")));
+  renderProjectSettings();
   const today = await api("/api/today");
   renderEntries(today.entries || []);
   await loadTodos();
@@ -447,6 +560,94 @@ function renderCategorySettings() {
   });
 }
 
+function renderProjectSettings() {
+  const list = $("settings-project-list");
+  if (!list) return;
+  list.innerHTML = "";
+  projects.forEach((project) => {
+    const row = document.createElement("div");
+    row.className = "settings-project-row";
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.className = "settings-project-name";
+    nameInput.value = project.name || project.id;
+    nameInput.maxLength = 100;
+    nameInput.setAttribute("aria-label", `Rename ${project.name || project.id}`);
+
+    const startInput = document.createElement("input");
+    startInput.type = "date";
+    startInput.className = "settings-project-date";
+    startInput.value = project.start_date || todayIso || "";
+    startInput.setAttribute("aria-label", `${project.name || project.id} start date`);
+
+    const endInput = document.createElement("input");
+    endInput.type = "date";
+    endInput.className = "settings-project-date";
+    endInput.value = project.end_date || "";
+    endInput.setAttribute("aria-label", `${project.name || project.id} end date`);
+
+    const archiveLabel = document.createElement("label");
+    archiveLabel.className = "settings-category-toggle";
+    const archiveInput = document.createElement("input");
+    archiveInput.type = "checkbox";
+    archiveInput.checked = !project.archived;
+    archiveInput.setAttribute("aria-label", `${project.archived ? "Reactivate" : "Archive"} ${project.name || project.id}`);
+    const archiveTrack = document.createElement("span");
+    archiveTrack.className = "settings-switch-track";
+    archiveTrack.setAttribute("aria-hidden", "true");
+    archiveLabel.appendChild(archiveInput);
+    archiveLabel.appendChild(archiveTrack);
+
+    async function updateProject(patch) {
+      try {
+        const data = await api(`/api/projects/${encodeURIComponent(project.id)}`, {
+          method: "PUT",
+          body: JSON.stringify(patch),
+        });
+        setProjects(data.projects || []);
+        mountTimeProjectPicker(projectIdsFrom($("time-project-mount")));
+        renderProjectSettings();
+        const today = await api("/api/today");
+        renderEntries(today.entries || []);
+        await loadTodos();
+      } catch (e) {
+        showAppMessage(e.message);
+      }
+    }
+
+    nameInput.addEventListener("blur", () => {
+      const next = nameInput.value.trim();
+      if (!next || next === project.name) {
+        nameInput.value = project.name || project.id;
+        return;
+      }
+      updateProject({ name: next });
+    });
+    nameInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        nameInput.blur();
+      }
+    });
+    startInput.addEventListener("change", () => {
+      updateProject({ start_date: startInput.value });
+    });
+    endInput.addEventListener("change", () => {
+      updateProject({ end_date: endInput.value || null });
+    });
+    archiveInput.addEventListener("change", () => {
+      updateProject({ archived: !archiveInput.checked });
+    });
+
+    row.appendChild(nameInput);
+    row.appendChild(startInput);
+    row.appendChild(endInput);
+    row.appendChild(archiveLabel);
+    list.appendChild(row);
+  });
+}
+
 function makeTrashButton(ariaLabel, onClick) {
   return makeIconButton("btn-icon-delete", ariaLabel, onClick, iconTrashSvg());
 }
@@ -517,6 +718,13 @@ function renderEntries(entries) {
     meta.textContent = e.note || "—";
     main.appendChild(title);
     main.appendChild(meta);
+    const pids = e.project_ids || e.projectIds || [];
+    if (pids.length) {
+      const projectsLine = document.createElement("div");
+      projectsLine.className = "entry-projects";
+      projectsLine.textContent = projectLabels(pids).map((p) => `#${p}`).join(" ");
+      main.appendChild(projectsLine);
+    }
 
     const timeRow = document.createElement("div");
     timeRow.className = "entry-time-row";
@@ -616,7 +824,8 @@ function gatherTodoPayload() {
       const dateInp = row.querySelector(".due-date");
       let deadline = dateInp && dateInp.value ? dateInp.value : null;
       const done = !!row.querySelector(".todo-done")?.checked;
-      out[which].push({ id, text, note, priority: pri, deadline, done, category: cat });
+      const project_ids = projectIdsFrom(row.querySelector(".todo-project-mount"));
+      out[which].push({ id, text, note, priority: pri, deadline, done, category: cat, project_ids });
     });
   });
   return out;
@@ -636,7 +845,8 @@ function rowToTask(row) {
   const deadline = dateInp && dateInp.value ? dateInp.value : null;
   const done = !!row.querySelector(".todo-done")?.checked;
   const id = row.dataset.taskId || "";
-  return { id, text, note, priority: pri, deadline, done, category: cat };
+  const project_ids = projectIdsFrom(row.querySelector(".todo-project-mount"));
+  return { id, text, note, priority: pri, deadline, done, category: cat, project_ids };
 }
 
 function taskSortTuple(t) {
@@ -704,6 +914,7 @@ function addTaskToPane(section, list) {
     deadline: null,
     done: false,
     category: defaultCategoryId(),
+    project_ids: [],
   });
   list.appendChild(row);
   row.querySelector(".todo-text")?.focus();
@@ -804,6 +1015,8 @@ function closeTaskLogModal() {
   delete modal.dataset.mode;
   const mount = $("task-log-category-mount");
   if (mount) mount.innerHTML = "";
+  const projectMount = $("task-log-project-mount");
+  if (projectMount) projectMount.innerHTML = "";
   resetTaskLogModalUi();
   const appMsg = $("app-message-modal");
   if (!appMsg || appMsg.classList.contains("hidden")) {
@@ -852,6 +1065,11 @@ async function openEntryLogModal(entry, { editIndex }) {
   delete modal.dataset.sourceTaskId;
   if (entry.source_task_id) modal.dataset.sourceTaskId = entry.source_task_id;
   mountTaskLogCategoryDd(entry.category || defaultCategoryId());
+  mountProjectPicker($("task-log-project-mount"), {
+    selectedIds: entry.project_ids || entry.projectIds || [],
+    compact: false,
+    onChange: null,
+  });
   $("task-log-note").value = (entry.note || "").slice(0, 200);
   if (isEdit) {
     setTaskLogDurationFields(entry.minutes);
@@ -872,10 +1090,16 @@ async function openTaskLogModal(row) {
   const tid = row.dataset.taskId || "";
   const cat =
     row.querySelector("input.todo-task-category")?.value || defaultCategoryId();
+  const project_ids = projectIdsFrom(row.querySelector(".todo-project-mount"));
   const text = row.querySelector(".todo-text")?.value.trim() || "";
   modal.dataset.sourceTaskId = tid;
   applyTaskLogModalMode("task", null);
   mountTaskLogCategoryDd(cat);
+  mountProjectPicker($("task-log-project-mount"), {
+    selectedIds: project_ids,
+    compact: false,
+    onChange: null,
+  });
   $("task-log-note").value = text.slice(0, 200);
   $("task-log-hours").value = "";
   $("task-log-minutes").value = "";
@@ -896,6 +1120,7 @@ async function duplicateEntry(entry) {
     minutes,
     category: entry.category || defaultCategoryId(),
     note: entry.note || "",
+    project_ids: entry.project_ids || entry.projectIds || [],
   };
   if (entry.source_task_id) body.source_task_id = entry.source_task_id;
   try {
@@ -936,7 +1161,8 @@ function readTaskLogFormBody() {
   }
   const category = $("task-log-category")?.value || defaultCategoryId();
   const note = $("task-log-note").value.trim();
-  const body = { category, note };
+  const project_ids = projectIdsFrom($("task-log-project-mount"));
+  const body = { category, note, project_ids };
   if (h > 0) body.hours = h;
   body.minutes = m > 0 ? m : 0;
   return { body };
@@ -1067,6 +1293,17 @@ function createTodoRow(task) {
   });
   catRow.appendChild(catMount);
 
+  const projectRow = document.createElement("div");
+  projectRow.className = "chip-row";
+  const projectMount = document.createElement("div");
+  projectMount.className = "todo-project-mount";
+  mountProjectPicker(projectMount, {
+    selectedIds: task.project_ids || task.projectIds || [],
+    compact: true,
+    onChange: () => scheduleTodoSave(),
+  });
+  projectRow.appendChild(projectMount);
+
   const noteInp = document.createElement("textarea");
   noteInp.className = "todo-note";
   noteInp.placeholder = "Notes";
@@ -1094,6 +1331,7 @@ function createTodoRow(task) {
   });
 
   metaControls.appendChild(catRow);
+  metaControls.appendChild(projectRow);
   metaControls.appendChild(prRow);
   metaControls.appendChild(buildDeadlineRow(task, row));
   meta.appendChild(metaControls);
@@ -1164,7 +1402,9 @@ function createCarryoverRow(task, sourceDate) {
   const meta = document.createElement("div");
   meta.className = "carryover-meta";
   const catLab = labelById[task.category] || task.category || "—";
-  meta.textContent = `${catLab} · ${(task.priority || "none").toUpperCase()}`;
+  const pids = task.project_ids || task.projectIds || [];
+  const projectText = pids.length ? ` · ${projectLabels(pids).map((p) => `#${p}`).join(" ")}` : "";
+  meta.textContent = `${catLab} · ${(task.priority || "none").toUpperCase()}${projectText}`;
   const actions = document.createElement("div");
   actions.className = "carryover-actions";
 
@@ -1334,7 +1574,9 @@ function renderHistory(payload) {
       const li = document.createElement("li");
       const lab = labelById[e.category] || e.category;
       const clock = e.logged_at ? ` · ${fmtClock(e.logged_at)}` : "";
-      li.textContent = `${fmtDuration(e.minutes)} · ${lab}${e.note ? ` — ${e.note}` : ""}${clock}`;
+      const pids = e.project_ids || e.projectIds || [];
+      const projectText = pids.length ? ` · ${projectLabels(pids).map((p) => `#${p}`).join(" ")}` : "";
+      li.textContent = `${fmtDuration(e.minutes)} · ${lab}${projectText}${e.note ? ` — ${e.note}` : ""}${clock}`;
       ul.appendChild(li);
     });
     inner.appendChild(ul);
@@ -1352,11 +1594,13 @@ function renderAnalytics(payload) {
   const byCat = payload.byCategory || [];
   const recent = payload.recentDailyTotals || [];
   const todo = payload.todoStats || {};
+  const projectHighlights = payload.projectHighlights || [];
   const recentWithTime = recent.filter((d) => (d.totalMinutes || 0) > 0);
   const hasTime = total > 0 || recentWithTime.length > 0;
   const hasTodos = (todo.tasksRecorded || 0) > 0;
+  const hasProjects = projectHighlights.length > 0;
 
-  if (!hasTime && !hasTodos) {
+  if (!hasTime && !hasTodos && !hasProjects) {
     root.innerHTML = "<p class=\"empty\">Nothing in this window yet.</p>";
     return;
   }
@@ -1421,6 +1665,32 @@ function renderAnalytics(payload) {
       daily.appendChild(list);
       root.appendChild(daily);
     }
+  }
+
+  if (hasProjects) {
+    const psec = document.createElement("div");
+    psec.className = "analytics-section analytics-projects";
+    psec.innerHTML = "<h3>Project highlights</h3>";
+    const maxProjectMinutes = Math.max(...projectHighlights.map((p) => p.totalMinutes || 0), 1);
+    projectHighlights.forEach((project) => {
+      const row = document.createElement("div");
+      row.className = "project-highlight" + (project.active ? "" : " is-inactive");
+      const pct = Math.round(((project.totalMinutes || 0) / maxProjectMinutes) * 100);
+      const notes = (project.recentNotes || []).map((n) => escapeHtml(n.note)).join(" · ");
+      row.innerHTML = `
+        <div class="project-highlight-head">
+          <span>${escapeHtml(project.label)}</span>
+          <span>${project.active ? "Active" : "Finished"}</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill bar-fill-time" style="width:${pct}%"></div></div>
+        <div class="project-highlight-meta">
+          ${fmtDuration(project.totalMinutes || 0)} · ${project.openTasks || 0} open · ${project.doneTasks || 0} done
+        </div>
+        ${notes ? `<div class="project-highlight-notes">${notes}</div>` : ""}
+      `;
+      psec.appendChild(row);
+    });
+    root.appendChild(psec);
   }
 
   if (hasTodos) {
@@ -1511,10 +1781,12 @@ function setupTabs() {
 async function init() {
   const meta = await api("/api/meta");
   setCategories(meta.categories || []);
+  setProjects(meta.projects || []);
   todayIso = meta.today;
   tomorrowIso = meta.tomorrow;
   $("dateLine").textContent = fmtDate(meta.today);
   mountTimeCategoryDd();
+  mountTimeProjectPicker();
 
   const today = await api("/api/today");
   renderEntries(today.entries || []);
@@ -1552,7 +1824,8 @@ async function init() {
     }
     const category = $("category")?.value || defaultCategoryId();
     const note = $("note").value.trim();
-    const body = { category, note };
+    const project_ids = projectIdsFrom($("time-project-mount"));
+    const body = { category, note, project_ids };
     if (h > 0) body.hours = h;
     body.minutes = m > 0 ? m : 0;
     try {
@@ -1563,6 +1836,7 @@ async function init() {
       $("hours").value = "";
       $("minutes").value = "";
       $("note").value = "";
+      mountTimeProjectPicker();
       $("minutes").focus();
       renderEntries(data.entries);
     } catch (e) {
@@ -1601,6 +1875,33 @@ async function init() {
       renderEntries(today.entries || []);
       await loadTodos();
       input?.focus();
+    } catch (e) {
+      showAppMessage(e.message);
+    }
+  });
+
+  $("settings-project-new-start").value = todayIso || "";
+  $("settings-project-form")?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const nameInput = $("settings-project-new-name");
+    const startInput = $("settings-project-new-start");
+    const name = nameInput?.value.trim() || "";
+    const start_date = startInput?.value || todayIso;
+    if (!name) return;
+    try {
+      const data = await api("/api/projects", {
+        method: "POST",
+        body: JSON.stringify({ name, start_date }),
+      });
+      if (nameInput) nameInput.value = "";
+      if (startInput) startInput.value = todayIso || "";
+      setProjects(data.projects || []);
+      mountTimeProjectPicker(projectIdsFrom($("time-project-mount")));
+      renderProjectSettings();
+      const today = await api("/api/today");
+      renderEntries(today.entries || []);
+      await loadTodos();
+      nameInput?.focus();
     } catch (e) {
       showAppMessage(e.message);
     }
