@@ -174,12 +174,14 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
-function categoryOptions() {
-  return categories.map((c) => ({ id: c.id, label: c.label }));
+function categoryOptions(includeDisabled = false) {
+  return categories
+    .filter((c) => includeDisabled || c.enabled !== false)
+    .map((c) => ({ id: c.id, label: c.label, enabled: c.enabled !== false }));
 }
 
 function defaultCategoryId() {
-  return categories[0]?.id || "deep_work";
+  return categories.find((c) => c.enabled !== false)?.id || categories[0]?.id || "deep_work";
 }
 
 function closeAllCustomDd() {
@@ -193,7 +195,15 @@ function closeAllCustomDd() {
 }
 
 function mountCustomDd(container, { hiddenId, hiddenClass, initialValue, compact, onChange }) {
-  const opts = categoryOptions();
+  const opts = categoryOptions(false);
+  if (initialValue && !opts.some((o) => o.id === initialValue)) {
+    const existing = categories.find((c) => c.id === initialValue);
+    opts.push({
+      id: initialValue,
+      label: existing ? `${existing.label} (disabled)` : initialValue,
+      enabled: false,
+    });
+  }
   if (!opts.length || !container) return;
   const val = opts.some((o) => o.id === initialValue) ? initialValue : opts[0].id;
   container.innerHTML = "";
@@ -300,6 +310,141 @@ function closeAppMessageModal() {
   if (!taskLog || taskLog.classList.contains("hidden")) {
     document.body.classList.remove("modal-open");
   }
+}
+
+function openSettingsModal() {
+  renderCategorySettings();
+  const modal = $("settings-modal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+  $("settings-category-new")?.focus();
+}
+
+function closeSettingsModal() {
+  const modal = $("settings-modal");
+  if (!modal || modal.classList.contains("hidden")) return;
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+  const taskLog = $("task-log-modal");
+  const message = $("app-message-modal");
+  if (
+    (!taskLog || taskLog.classList.contains("hidden")) &&
+    (!message || message.classList.contains("hidden"))
+  ) {
+    document.body.classList.remove("modal-open");
+  }
+}
+
+function setCategories(nextCategories) {
+  categories = nextCategories || [];
+  labelById = Object.fromEntries(categories.map((c) => [c.id, c.label]));
+}
+
+async function refreshCategoriesFromServer() {
+  const data = await api("/api/categories");
+  setCategories(data.categories || []);
+  mountTimeCategoryDd();
+  renderCategorySettings();
+  const today = await api("/api/today");
+  renderEntries(today.entries || []);
+  await loadTodos();
+}
+
+function renderCategorySettings() {
+  const list = $("settings-category-list");
+  if (!list) return;
+  list.innerHTML = "";
+  categories.forEach((cat) => {
+    const row = document.createElement("div");
+    row.className = "settings-category-row";
+
+    const labelInput = document.createElement("input");
+    labelInput.type = "text";
+    labelInput.className = "settings-category-name";
+    labelInput.value = cat.label || cat.id;
+    labelInput.maxLength = 80;
+    labelInput.setAttribute("aria-label", `Rename ${cat.label || cat.id}`);
+
+    const enabledLabel = document.createElement("label");
+    enabledLabel.className = "settings-category-toggle";
+    const enabledInput = document.createElement("input");
+    enabledInput.type = "checkbox";
+    enabledInput.checked = cat.enabled !== false;
+    enabledInput.setAttribute("aria-label", `${cat.enabled !== false ? "Disable" : "Enable"} ${cat.label || cat.id}`);
+    const enabledText = document.createElement("span");
+    enabledText.className = "settings-switch-track";
+    enabledText.setAttribute("aria-hidden", "true");
+    enabledLabel.appendChild(enabledInput);
+    enabledLabel.appendChild(enabledText);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "btn-icon-delete settings-category-remove";
+    removeBtn.setAttribute("aria-label", `Remove ${cat.label || cat.id}`);
+    removeBtn.title = "Remove category";
+    removeBtn.innerHTML = iconTrashSvg();
+
+    async function updateCategory(patch) {
+      try {
+        const data = await api(`/api/categories/${encodeURIComponent(cat.id)}`, {
+          method: "PUT",
+          body: JSON.stringify(patch),
+        });
+        setCategories(data.categories || []);
+        mountTimeCategoryDd();
+        renderCategorySettings();
+        const today = await api("/api/today");
+        renderEntries(today.entries || []);
+        await loadTodos();
+      } catch (e) {
+        showAppMessage(e.message);
+      }
+    }
+
+    labelInput.addEventListener("blur", () => {
+      const next = labelInput.value.trim();
+      if (!next || next === cat.label) {
+        labelInput.value = cat.label || cat.id;
+        return;
+      }
+      updateCategory({ label: next });
+    });
+    labelInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        labelInput.blur();
+      }
+    });
+    enabledInput.addEventListener("change", () => {
+      updateCategory({ enabled: enabledInput.checked });
+    });
+    removeBtn.addEventListener("click", async () => {
+      const ok = window.confirm(
+        `Remove "${cat.label || cat.id}" from category settings? Existing logs and tasks will not be edited.`
+      );
+      if (!ok) return;
+      try {
+        const data = await api(`/api/categories/${encodeURIComponent(cat.id)}`, {
+          method: "DELETE",
+        });
+        setCategories(data.categories || []);
+        mountTimeCategoryDd();
+        renderCategorySettings();
+        const today = await api("/api/today");
+        renderEntries(today.entries || []);
+        await loadTodos();
+      } catch (e) {
+        showAppMessage(e.message);
+      }
+    });
+
+    row.appendChild(labelInput);
+    row.appendChild(enabledLabel);
+    row.appendChild(removeBtn);
+    list.appendChild(row);
+  });
 }
 
 function makeTrashButton(ariaLabel, onClick) {
@@ -596,7 +741,7 @@ function mountTaskLogCategoryDd(initialCat) {
   const mount = $("task-log-category-mount");
   if (!mount) return;
   mount.innerHTML = "";
-  const val = categories.some((c) => c.id === initialCat) ? initialCat : defaultCategoryId();
+  const val = initialCat || defaultCategoryId();
   mountCustomDd(mount, {
     hiddenId: "task-log-category",
     hiddenClass: "",
@@ -706,10 +851,7 @@ async function openEntryLogModal(entry, { editIndex }) {
   applyTaskLogModalMode(mode, isEdit ? editIndex : null);
   delete modal.dataset.sourceTaskId;
   if (entry.source_task_id) modal.dataset.sourceTaskId = entry.source_task_id;
-  const cat = categories.some((c) => c.id === entry.category)
-    ? entry.category
-    : defaultCategoryId();
-  mountTaskLogCategoryDd(cat);
+  mountTaskLogCategoryDd(entry.category || defaultCategoryId());
   $("task-log-note").value = (entry.note || "").slice(0, 200);
   if (isEdit) {
     setTaskLogDurationFields(entry.minutes);
@@ -914,13 +1056,10 @@ function createTodoRow(task) {
   catRow.className = "chip-row";
   const catMount = document.createElement("div");
   catMount.className = "todo-category-dd-mount";
-  const initCat = categories.some((c) => c.id === task.category)
-    ? task.category
-    : defaultCategoryId();
   mountCustomDd(catMount, {
     hiddenId: null,
     hiddenClass: "todo-task-category",
-    initialValue: initCat,
+    initialValue: task.category || defaultCategoryId(),
     compact: true,
     onChange: () => {
       scheduleTodoSave();
@@ -1371,8 +1510,7 @@ function setupTabs() {
 
 async function init() {
   const meta = await api("/api/meta");
-  categories = meta.categories || [];
-  labelById = Object.fromEntries(categories.map((c) => [c.id, c.label]));
+  setCategories(meta.categories || []);
   todayIso = meta.today;
   tomorrowIso = meta.tomorrow;
   $("dateLine").textContent = fmtDate(meta.today);
@@ -1441,6 +1579,32 @@ async function init() {
 
   $("app-message-ok")?.addEventListener("click", closeAppMessageModal);
   $("app-message-backdrop")?.addEventListener("click", closeAppMessageModal);
+
+  $("settings-open")?.addEventListener("click", openSettingsModal);
+  $("settings-close")?.addEventListener("click", closeSettingsModal);
+  $("settings-backdrop")?.addEventListener("click", closeSettingsModal);
+  $("settings-category-form")?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const input = $("settings-category-new");
+    const label = input?.value.trim() || "";
+    if (!label) return;
+    try {
+      const data = await api("/api/categories", {
+        method: "POST",
+        body: JSON.stringify({ label }),
+      });
+      if (input) input.value = "";
+      setCategories(data.categories || []);
+      mountTimeCategoryDd();
+      renderCategorySettings();
+      const today = await api("/api/today");
+      renderEntries(today.entries || []);
+      await loadTodos();
+      input?.focus();
+    } catch (e) {
+      showAppMessage(e.message);
+    }
+  });
 
   const taskLogBackdrop = $("task-log-modal-backdrop");
   const taskLogCancel = $("task-log-cancel");

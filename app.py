@@ -8,6 +8,7 @@ from __future__ import annotations
 import hmac
 import json
 import os
+import re
 import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -19,22 +20,21 @@ ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
 DEFAULT_TIMEZONE = "Asia/Kolkata"
 
-CATEGORIES = [
-    {"id": "deep_work", "label": "Deep work"},
-    {"id": "meetings", "label": "Meetings & sync"},
-    {"id": "review", "label": "Code & design review"},
-    {"id": "docs", "label": "Docs & RFCs"},
-    {"id": "planning", "label": "Planning & estimation"},
-    {"id": "research", "label": "Research & spikes"},
-    {"id": "strategy", "label": "Strategy & roadmap"},
-    {"id": "mentoring", "label": "Mentoring & 1:1s"},
-    {"id": "incident", "label": "Incidents & RCA"},
-    {"id": "oncall", "label": "On-call"},
-    {"id": "admin", "label": "Admin & comms"},
+DEFAULT_CATEGORIES = [
+    {"id": "deep_work", "label": "Deep work", "enabled": True},
+    {"id": "meetings", "label": "Meetings & sync", "enabled": True},
+    {"id": "review", "label": "Code & design review", "enabled": True},
+    {"id": "docs", "label": "Docs & RFCs", "enabled": True},
+    {"id": "planning", "label": "Planning & estimation", "enabled": True},
+    {"id": "research", "label": "Research & spikes", "enabled": True},
+    {"id": "strategy", "label": "Strategy & roadmap", "enabled": True},
+    {"id": "mentoring", "label": "Mentoring & 1:1s", "enabled": True},
+    {"id": "incident", "label": "Incidents & RCA", "enabled": True},
+    {"id": "oncall", "label": "On-call", "enabled": True},
+    {"id": "admin", "label": "Admin & comms", "enabled": True},
 ]
 
-CATEGORY_IDS = frozenset(c["id"] for c in CATEGORIES)
-DEFAULT_TASK_CATEGORY = CATEGORIES[0]["id"]
+DEFAULT_TASK_CATEGORY = DEFAULT_CATEGORIES[0]["id"]
 
 PRIORITIES = frozenset({"p1", "p2", "p3", "none"})
 
@@ -135,6 +135,91 @@ def _save_day(d: date, payload: dict) -> None:
         json.dump(payload, f, indent=2)
 
 
+def _categories_path() -> Path:
+    data = _data_dir()
+    data.mkdir(parents=True, exist_ok=True)
+    return data / "categories.json"
+
+
+def _slugify_category_id(label: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_")
+    return slug[:48] or f"category_{uuid.uuid4().hex[:8]}"
+
+
+def _normalize_category(obj) -> dict:
+    if not isinstance(obj, dict):
+        return {}
+    label = str(obj.get("label") or "").strip()
+    if not label:
+        return {}
+    cid = str(obj.get("id") or "").strip().lower()
+    if not cid:
+        cid = _slugify_category_id(label)
+    cid = re.sub(r"[^a-z0-9_]+", "_", cid).strip("_")[:64]
+    if not cid:
+        cid = _slugify_category_id(label)
+    return {
+        "id": cid,
+        "label": label[:80],
+        "enabled": bool(obj.get("enabled", True)),
+    }
+
+
+def _dedupe_categories(categories: list[dict]) -> list[dict]:
+    out: list[dict] = []
+    seen: set[str] = set()
+    for raw in categories:
+        cat = _normalize_category(raw)
+        if not cat:
+            continue
+        base = cat["id"]
+        cid = base
+        n = 2
+        while cid in seen:
+            cid = f"{base}_{n}"
+            n += 1
+        cat["id"] = cid
+        seen.add(cid)
+        out.append(cat)
+    return out
+
+
+def _load_categories() -> list[dict]:
+    p = _categories_path()
+    if not p.exists():
+        return [dict(c) for c in DEFAULT_CATEGORIES]
+    with open(p, encoding="utf-8") as f:
+        raw = json.load(f)
+    if not isinstance(raw, list):
+        return [dict(c) for c in DEFAULT_CATEGORIES]
+    categories = _dedupe_categories(raw)
+    return categories or [dict(c) for c in DEFAULT_CATEGORIES]
+
+
+def _save_categories(categories: list[dict]) -> None:
+    with open(_categories_path(), "w", encoding="utf-8") as f:
+        json.dump(_dedupe_categories(categories), f, indent=2)
+
+
+def _category_ids(include_disabled: bool = True) -> set[str]:
+    categories = _load_categories()
+    if include_disabled:
+        return {c["id"] for c in categories}
+    return {c["id"] for c in categories if c.get("enabled", True)}
+
+
+def _default_category_id() -> str:
+    categories = _load_categories()
+    for cat in categories:
+        if cat.get("enabled", True):
+            return cat["id"]
+    return categories[0]["id"] if categories else DEFAULT_TASK_CATEGORY
+
+
+def _category_label_by_id() -> dict[str, str]:
+    return {c["id"]: c["label"] for c in _load_categories()}
+
+
 def _todos_path() -> Path:
     data = _data_dir()
     data.mkdir(parents=True, exist_ok=True)
@@ -170,7 +255,7 @@ def _normalize_task(obj) -> dict:
             "priority": "none",
             "deadline": None,
             "done": False,
-            "category": DEFAULT_TASK_CATEGORY,
+            "category": _default_category_id(),
         }
     if not isinstance(obj, dict):
         return {}
@@ -183,8 +268,8 @@ def _normalize_task(obj) -> dict:
     cat = str(obj.get("category") or "").strip().lower()
     if cat in ("personal", "general"):
         cat = "deep_work" if cat == "personal" else "admin"
-    if cat not in CATEGORY_IDS:
-        cat = DEFAULT_TASK_CATEGORY
+    if not cat:
+        cat = _default_category_id()
     dl = obj.get("deadline")
     if dl is not None and dl != "":
         try:
@@ -295,7 +380,9 @@ def _find_task_by_id(tasks: list[dict], task_id: str) -> tuple[int | None, dict 
 
 
 def _todo_stats_for_window(store: dict, window_days: int = 30) -> dict:
-    label_by_id = {c["id"]: c["label"] for c in CATEGORIES}
+    label_by_id = _category_label_by_id()
+    valid_categories = _category_ids(include_disabled=True)
+    default_category = _default_category_id()
     today = _today()
     start = today - timedelta(days=window_days - 1)
     days_out: list[dict] = []
@@ -313,9 +400,9 @@ def _todo_stats_for_window(store: dict, window_days: int = 30) -> dict:
         tasks_recorded += n
         done_recorded += dn
         for t in tasks:
-            cid = str(t.get("category") or DEFAULT_TASK_CATEGORY)
-            if cid not in CATEGORY_IDS:
-                cid = DEFAULT_TASK_CATEGORY
+            cid = str(t.get("category") or default_category)
+            if not cid:
+                cid = default_category
             task_by_cat[cid] = task_by_cat.get(cid, 0) + 1
         days_out.append(
             {
@@ -331,9 +418,9 @@ def _todo_stats_for_window(store: dict, window_days: int = 30) -> dict:
         tasks_recorded += 1
         if t.get("done"):
             done_recorded += 1
-        cid = str(t.get("category") or DEFAULT_TASK_CATEGORY)
-        if cid not in CATEGORY_IDS:
-            cid = DEFAULT_TASK_CATEGORY
+        cid = str(t.get("category") or default_category)
+        if not cid:
+            cid = default_category
         task_by_cat[cid] = task_by_cat.get(cid, 0) + 1
 
     completion = round(100 * done_recorded / tasks_recorded, 1) if tasks_recorded else 0.0
@@ -383,11 +470,66 @@ def meta():
     today = _today()
     return jsonify(
         {
-            "categories": CATEGORIES,
+            "categories": _load_categories(),
             "today": today.isoformat(),
             "tomorrow": (today + timedelta(days=1)).isoformat(),
         }
     )
+
+
+@app.route("/api/categories", methods=["GET"])
+def get_categories():
+    return jsonify({"categories": _load_categories()})
+
+
+@app.route("/api/categories", methods=["POST"])
+def create_category():
+    body = request.get_json(force=True, silent=True) or {}
+    label = str(body.get("label") or "").strip()
+    if not label:
+        return jsonify({"error": "label is required"}), 400
+    categories = _load_categories()
+    existing = {c["id"] for c in categories}
+    base = _slugify_category_id(label)
+    cid = base
+    n = 2
+    while cid in existing:
+        cid = f"{base}_{n}"
+        n += 1
+    categories.append({"id": cid, "label": label[:80], "enabled": True})
+    _save_categories(categories)
+    return jsonify({"ok": True, "categories": _load_categories()}), 201
+
+
+@app.route("/api/categories/<category_id>", methods=["PUT"])
+def update_category(category_id: str):
+    body = request.get_json(force=True, silent=True) or {}
+    categories = _load_categories()
+    for cat in categories:
+        if cat["id"] != category_id:
+            continue
+        if "label" in body:
+            label = str(body.get("label") or "").strip()
+            if not label:
+                return jsonify({"error": "label is required"}), 400
+            cat["label"] = label[:80]
+        if "enabled" in body:
+            cat["enabled"] = bool(body.get("enabled"))
+        _save_categories(categories)
+        return jsonify({"ok": True, "categories": _load_categories()})
+    return jsonify({"error": "not found"}), 404
+
+
+@app.route("/api/categories/<category_id>", methods=["DELETE"])
+def delete_category(category_id: str):
+    categories = _load_categories()
+    next_categories = [c for c in categories if c["id"] != category_id]
+    if len(next_categories) == len(categories):
+        return jsonify({"error": "not found"}), 404
+    if not next_categories:
+        return jsonify({"error": "at least one category is required"}), 400
+    _save_categories(next_categories)
+    return jsonify({"ok": True, "categories": _load_categories()})
 
 
 @app.route("/api/today", methods=["GET"])
@@ -428,7 +570,7 @@ def add_entry():
     category = (body.get("category") or "").strip()
     note = (body.get("note") or "").strip()
 
-    valid = {c["id"] for c in CATEGORIES}
+    valid = _category_ids(include_disabled=True)
     if category not in valid:
         return jsonify({"error": "invalid category"}), 400
 
@@ -457,7 +599,7 @@ def update_entry(index: int):
         return jsonify({"error": err}), 400
     category = (body.get("category") or "").strip()
     note = (body.get("note") or "").strip()
-    valid = {c["id"] for c in CATEGORIES}
+    valid = _category_ids(include_disabled=True)
     if category not in valid:
         return jsonify({"error": "invalid category"}), 400
 
@@ -580,7 +722,7 @@ def save_todos():
             "priority": "none",
             "deadline": None,
             "done": False,
-            "category": DEFAULT_TASK_CATEGORY,
+            "category": _default_category_id(),
         }
         for t in cleaned
     ]
@@ -638,7 +780,7 @@ def _collect_days_for_analytics(max_days: int = 30) -> list[dict]:
     files = sorted(data.glob("*.json"), reverse=True)
     days: list[dict] = []
     for p in files:
-        if p.name == "todos.json":
+        if p.name in ("todos.json", "categories.json"):
             continue
         try:
             d = date.fromisoformat(p.stem)
@@ -655,7 +797,7 @@ def _collect_days_for_analytics(max_days: int = 30) -> list[dict]:
 @app.route("/api/analytics", methods=["GET"])
 def analytics():
     """Time roll-up + todo intentions over the last 30 days."""
-    label_by_id = {c["id"]: c["label"] for c in CATEGORIES}
+    label_by_id = _category_label_by_id()
     days_data = _collect_days_for_analytics(30)
     store = _load_todos()
     todo_stats = _todo_stats_for_window(store, 30)
@@ -721,10 +863,10 @@ def history():
     if not data.exists():
         return jsonify({"days": []})
     files = sorted(data.glob("*.json"), reverse=True)
-    label_by_id = {c["id"]: c["label"] for c in CATEGORIES}
+    label_by_id = _category_label_by_id()
     days = []
     for p in files:
-        if p.name == "todos.json":
+        if p.name in ("todos.json", "categories.json"):
             continue
         try:
             d = date.fromisoformat(p.stem)
