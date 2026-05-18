@@ -12,6 +12,12 @@
     <p class="eyebrow">A quiet place to notice the day</p>
     <h1>Ground</h1>
     <p class="sub" id="dateLine"></p>
+    <button type="button" class="settings-trigger" id="settings-open" aria-label="Open settings" title="Settings">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.72l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    </button>
     <nav class="tabs" role="tablist">
       <button type="button" class="tab active" data-view="sheet" role="tab" aria-selected="true">Today</button>
       <button type="button" class="tab" data-view="history" role="tab" aria-selected="false">History</button>
@@ -113,6 +119,38 @@
           <button type="submit" class="primary" id="task-log-submit">Log time</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" id="settings-backdrop" tabindex="-1"></div>
+    <div
+      class="modal-dialog modal-dialog-settings card card-todos"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-title"
+    >
+      <div class="settings-head">
+        <h2 id="settings-title" class="modal-title">Settings</h2>
+        <button type="button" class="btn-icon-delete" id="settings-close" aria-label="Close settings">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <section class="settings-section" aria-labelledby="settings-categories-title">
+        <h3 id="settings-categories-title">Categories</h3>
+        <div id="settings-category-list" class="settings-category-list"></div>
+        <form id="settings-category-form" class="settings-category-form">
+          <input type="text" id="settings-category-new" maxlength="80" placeholder="New category" autocomplete="off" />
+          <button type="submit" class="settings-add-category" aria-label="Add category" title="Add category">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14"/><path d="M12 5v14"/>
+            </svg>
+          </button>
+        </form>
+        <p class="hint">Removing or disabling a category does not edit existing logged work.</p>
+      </section>
     </div>
   </div>
 
